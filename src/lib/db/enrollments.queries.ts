@@ -2,6 +2,24 @@ import type { Course, Enrollment } from "@/types/db";
 import { sql } from "./client";
 import { mapCourse, mapEnrollment } from "./mappers";
 
+export async function canAccessCoursePlayer(
+  userId: number,
+  role: string | undefined,
+  courseId: number,
+): Promise<{ allowed: boolean; preview: boolean }> {
+  if (role === "admin") return { allowed: true, preview: true };
+  if (role === "instructor") {
+    const rows = await sql`
+      SELECT 1 FROM courses
+      WHERE id = ${courseId} AND instructor_id = ${userId} AND deleted_at IS NULL
+      LIMIT 1
+    `;
+    if (rows.length > 0) return { allowed: true, preview: true };
+  }
+  const enrolled = await checkEnrollment(userId, courseId);
+  return { allowed: enrolled, preview: false };
+}
+
 export async function checkEnrollment(userId: number, courseId: number): Promise<boolean> {
   const rows = await sql`
     SELECT 1 FROM enrollments
@@ -59,6 +77,71 @@ export async function listEnrollmentsForUser(
         created_at: row.c_created_at,
         updated_at: row.c_updated_at,
       }),
+    };
+  });
+}
+
+export type InstructorStudentRow = {
+  enrollmentId: number;
+  userId: number;
+  name: string;
+  email: string;
+  whatsappNumber: string | null;
+  progressPct: string;
+  status: string;
+  enrolledAt: Date;
+};
+
+export async function listStudentsForCourse(courseId: number): Promise<InstructorStudentRow[]> {
+  const rows = await sql`
+    SELECT e.id, e.user_id, e.status, e.progress_pct, e.enrolled_at,
+           u.name, u.email, u.whatsapp_number
+    FROM enrollments e
+    JOIN users u ON u.id = e.user_id
+    WHERE e.course_id = ${courseId}
+    ORDER BY e.enrolled_at DESC
+  `;
+  return rows.map((r) => {
+    const row = r as Record<string, unknown>;
+    return {
+      enrollmentId: Number(row.id),
+      userId: Number(row.user_id),
+      name: String(row.name),
+      email: String(row.email),
+      whatsappNumber: row.whatsapp_number == null ? null : String(row.whatsapp_number),
+      progressPct: String(row.progress_pct ?? "0"),
+      status: String(row.status),
+      enrolledAt: row.enrolled_at instanceof Date ? row.enrolled_at : new Date(String(row.enrolled_at)),
+    };
+  });
+}
+
+export async function listStudentsForInstructor(instructorId: number | null): Promise<
+  Array<InstructorStudentRow & { courseId: number; courseTitle: string }>
+> {
+  const rows = await sql`
+    SELECT e.id, e.user_id, e.status, e.progress_pct, e.enrolled_at, e.course_id,
+           u.name, u.email, u.whatsapp_number, c.title AS course_title
+    FROM enrollments e
+    JOIN users u ON u.id = e.user_id
+    JOIN courses c ON c.id = e.course_id
+    WHERE c.deleted_at IS NULL
+      AND (${instructorId}::bigint IS NULL OR c.instructor_id = ${instructorId})
+    ORDER BY e.enrolled_at DESC
+  `;
+  return rows.map((r) => {
+    const row = r as Record<string, unknown>;
+    return {
+      enrollmentId: Number(row.id),
+      userId: Number(row.user_id),
+      name: String(row.name),
+      email: String(row.email),
+      whatsappNumber: row.whatsapp_number == null ? null : String(row.whatsapp_number),
+      progressPct: String(row.progress_pct ?? "0"),
+      status: String(row.status),
+      enrolledAt: row.enrolled_at instanceof Date ? row.enrolled_at : new Date(String(row.enrolled_at)),
+      courseId: Number(row.course_id),
+      courseTitle: String(row.course_title),
     };
   });
 }

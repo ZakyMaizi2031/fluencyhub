@@ -1,7 +1,8 @@
+import { cache } from "react";
 import { getServerSession } from "next-auth";
 import { getAuthOptions, getAuthSecret } from "@/lib/auth";
 
-export async function auth() {
+export const auth = cache(async () => {
   if (!getAuthSecret()) {
     console.error("NEXTAUTH_SECRET is empty at runtime. Check Vercel env for Production.");
     return null;
@@ -17,4 +18,4 @@ export async function auth() {
     }
     throw error;
   }
-}
+});

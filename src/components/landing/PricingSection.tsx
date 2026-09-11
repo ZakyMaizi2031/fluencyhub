@@ -1,0 +1,55 @@
+import Link from "next/link";
+import { LandingIcon } from "@/components/landing/LandingIcon";
+import { formatIdr } from "@/lib/utils/cn";
+import type { PublishedCourseCard } from "@/types/db";
+
+export function PricingSection({ courses }: { courses: PublishedCourseCard[] }) {
+  return (
+    <section id="harga" className="px-5 py-16">
+      <div className="mx-auto max-w-[1200px]">
+        <div className="mb-10 text-center">
+          <p className="section-label">Pilihan Kelas</p>
+          <h2 className="heading-lg mb-3">Investasi Terbaik untuk Karir Anda</h2>
+          <p className="text-[15px] text-[var(--text-3)]">Akses seumur hidup. Tidak ada biaya tersembunyi.</p>
+        </div>
+        <div className="grid-3">
+          {courses.map((c) => (
+            <article key={c.id} className={`pricing-card${c.isFeatured ? " featured" : ""}`}>
+              <div className="relative">
+                {c.thumbnailUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={c.thumbnailUrl} alt="" className="aspect-video w-full object-cover" />
+                ) : null}
+                <div className="absolute top-2.5 left-2.5">
+                  <span className={`badge ${c.isFeatured ? "badge-primary" : "badge"}`}>{c.marketingTag ?? c.level}</span>
+                </div>
+                {c.isFeatured ? (
+                  <div className="absolute top-2.5 right-2.5">
+                    <span className="badge badge-warning">Most Popular</span>
+                  </div>
+                ) : null}
+              </div>
+              <div className="p-5">
+                <div className="mb-2 flex items-center gap-1.5">
+                  <span className="badge badge-primary">{c.level}</span>
+                  <span className="text-xs text-[var(--text-4)]">· {c.enrollmentCount} siswa</span>
+                </div>
+                <h3 className="mb-1 font-[family-name:var(--font-heading)] text-[15px] font-bold leading-snug">{c.title}</h3>
+                <p className="mb-3.5 text-xs text-[var(--text-4)]">by {c.instructorName}</p>
+                <div className="mb-4 flex items-baseline gap-2">
+                  <span className="font-[family-name:var(--font-heading)] text-[22px] font-extrabold">{formatIdr(c.price)}</span>
+                  {c.originalPrice ? (
+                    <span className="text-xs text-[var(--text-4)] line-through">{formatIdr(c.originalPrice)}</span>
+                  ) : null}
+                </div>
+                <Link href={`/courses/${c.slug}`} className={`btn btn-full btn-default ${c.isFeatured ? "btn-primary" : "btn-secondary"}`}>
+                  Daftar Sekarang <LandingIcon name="ArrowRight" color={c.isFeatured ? "#fff" : "var(--text-2)"} />
+                </Link>
+              </div>
+            </article>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}

@@ -1,6 +1,8 @@
 import type { Course, Order } from "@/types/db";
+import { getCourseById } from "@/lib/db/courses.queries";
 import { createEnrollment } from "@/lib/db/enrollments.queries";
-import { updateOrderStatus } from "@/lib/db/orders.queries";
+import { getOrderById, updateOrderStatus } from "@/lib/db/orders.queries";
+import { approveProofsForOrder } from "@/lib/db/payment-proofs.queries";
 
 export function generateOrderNumber() {
   const d = new Date();
@@ -29,4 +31,23 @@ export async function markOrderPaid(order: Order, course: Course): Promise<Order
     orderId: order.id,
   });
   return updated;
+}
+
+export async function approveManualOrder(orderId: number, verifiedBy?: number): Promise<Order> {
+  const order = await getOrderById(orderId);
+  if (!order) throw new Error("Order missing");
+  if (order.status === "paid") {
+    await createEnrollment({
+      userId: order.userId,
+      courseId: order.courseId,
+      orderId: order.id,
+    });
+    if (verifiedBy) await approveProofsForOrder(order.id, verifiedBy);
+    return order;
+  }
+  const course = await getCourseById(order.courseId);
+  if (!course) throw new Error("Course missing");
+  const paid = await markOrderPaid(order, course);
+  if (verifiedBy) await approveProofsForOrder(order.id, verifiedBy);
+  return paid;
 }

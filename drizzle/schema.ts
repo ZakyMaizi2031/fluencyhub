@@ -75,6 +75,7 @@ export const courses = pgTable(
     maxStudents: integer("max_students"),
     language: varchar("language", { length: 10 }).notNull().default("id"),
     level: varchar("level", { length: 50 }).notNull().default("beginner"),
+    marketingTag: varchar("marketing_tag", { length: 50 }),
     platformFeePct: numeric("platform_fee_pct", { precision: 5, scale: 2 }).notNull().default("30.00"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
@@ -380,4 +381,63 @@ export const auditLogs = pgTable("audit_logs", {
   ipAddress: varchar("ip_address", { length: 45 }),
   userAgent: text("user_agent"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const siteSettings = pgTable("site_settings", {
+  id: bigserial("id", { mode: "number" }).primaryKey(),
+  key: varchar("key", { length: 100 }).notNull().unique(),
+  value: text("value").notNull().default(""),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const landingPainPoints = pgTable("landing_pain_points", {
+  id: bigserial("id", { mode: "number" }).primaryKey(),
+  icon: varchar("icon", { length: 50 }).notNull(),
+  iconBg: varchar("icon_bg", { length: 20 }).notNull(),
+  iconColor: varchar("icon_color", { length: 20 }).notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description").notNull(),
+  sortOrder: integer("sort_order").notNull().default(0),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const landingMethodItems = pgTable(
+  "landing_method_items",
+  {
+    id: bigserial("id", { mode: "number" }).primaryKey(),
+    tab: varchar("tab", { length: 20 }).notNull(),
+    icon: varchar("icon", { length: 50 }).notNull(),
+    title: varchar("title", { length: 255 }).notNull(),
+    description: text("description").notNull(),
+    sortOrder: integer("sort_order").notNull().default(0),
+    isActive: boolean("is_active").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [check("landing_method_items_tab_check", sql`${t.tab} IN ('online', 'hybrid')`)],
+);
+
+export const testimonials = pgTable("testimonials", {
+  id: bigserial("id", { mode: "number" }).primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  role: varchar("role", { length: 255 }).notNull(),
+  quote: text("quote").notNull(),
+  avatarUrl: text("avatar_url"),
+  rating: integer("rating").notNull().default(5),
+  sortOrder: integer("sort_order").notNull().default(0),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const faqs = pgTable("faqs", {
+  id: bigserial("id", { mode: "number" }).primaryKey(),
+  question: varchar("question", { length: 500 }).notNull(),
+  answer: text("answer").notNull(),
+  sortOrder: integer("sort_order").notNull().default(0),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });

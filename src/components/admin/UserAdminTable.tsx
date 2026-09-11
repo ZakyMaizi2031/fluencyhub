@@ -1,0 +1,231 @@
+"use client";
+
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { AdminDataGrid } from "@/components/admin/AdminDataGrid";
+import { AdminFormDialog } from "@/components/admin/AdminFormDialog";
+
+type UserRow = {
+  id: number;
+  name: string;
+  email: string;
+  whatsappNumber: string | null;
+  avatarUrl: string | null;
+  role: "user" | "instructor" | "admin";
+  enrolledCount: number;
+  isActive: boolean;
+  revenueSharePct: string;
+  createdAt: string;
+};
+
+type Draft = {
+  name: string;
+  email: string;
+  whatsappNumber: string;
+  avatarUrl: string;
+  role: UserRow["role"];
+  isActive: boolean;
+  revenueSharePct: string;
+};
+
+const empty: Draft = {
+  name: "",
+  email: "",
+  whatsappNumber: "",
+  avatarUrl: "",
+  role: "user",
+  isActive: true,
+  revenueSharePct: "70.00",
+};
+
+export function UserAdminTable({ users, currentUserId }: { users: UserRow[]; currentUserId: number | null }) {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [editId, setEditId] = useState<number | null>(null);
+  const [values, setValues] = useState<Draft>(empty);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  function startCreate() {
+    setEditId(null);
+    setValues(empty);
+    setError("");
+    setOpen(true);
+  }
+
+  function startEdit(u: UserRow) {
+    setEditId(u.id);
+    setValues({
+      name: u.name,
+      email: u.email,
+      whatsappNumber: u.whatsappNumber ?? "",
+      avatarUrl: u.avatarUrl ?? "",
+      role: u.role,
+      isActive: u.isActive,
+      revenueSharePct: u.revenueSharePct,
+    });
+    setError("");
+    setOpen(true);
+  }
+
+  async function save() {
+    setBusy(true);
+    setError("");
+    const body = {
+      name: values.name,
+      email: values.email,
+      whatsappNumber: values.whatsappNumber || null,
+      avatarUrl: values.avatarUrl || null,
+      role: values.role,
+      isActive: values.isActive,
+      revenueSharePct: values.revenueSharePct || "70.00",
+    };
+    const res = await fetch(editId == null ? "/api/admin/users" : `/api/admin/users/${editId}`, {
+      method: editId == null ? "POST" : "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    setBusy(false);
+    if (!res.ok) {
+      const json = (await res.json().catch(() => ({}))) as { error?: string };
+      setError(typeof json.error === "string" ? json.error : "Save failed");
+      return;
+    }
+    setOpen(false);
+    router.refresh();
+  }
+
+  async function remove(u: UserRow) {
+    if (currentUserId != null && u.id === currentUserId) {
+      alert("You cannot delete your own account.");
+      return;
+    }
+    if (!confirm(`Delete ${u.name}? This hides the user from the platform.`)) return;
+    setBusy(true);
+    const res = await fetch(`/api/admin/users/${u.id}`, { method: "DELETE" });
+    setBusy(false);
+    if (!res.ok) {
+      const json = (await res.json().catch(() => ({}))) as { error?: string };
+      alert(typeof json.error === "string" ? json.error : "Delete failed");
+      return;
+    }
+    router.refresh();
+  }
+
+  return (
+    <div>
+      <div className="mb-4 flex items-center justify-between">
+        <h1 className="text-2xl font-extrabold">Users</h1>
+        <button type="button" className="btn btn-primary btn-sm" onClick={startCreate}>
+          Add user
+        </button>
+      </div>
+      <AdminDataGrid
+        columns={["Name", "Email", "WhatsApp", "Role", "Enrolled", "Share %", "Status", "Joined", "Actions"]}
+        rowCount={users.length}
+      >
+        {({ start, end }) =>
+          users.slice(start, end).map((u, i) => (
+            <tr key={u.id}>
+              <td className="text-[var(--text-3)]">{start + i + 1}</td>
+              <td className="font-semibold">{u.name}</td>
+              <td>{u.email}</td>
+              <td>{u.whatsappNumber ?? "—"}</td>
+              <td>
+                <span className={u.role === "admin" ? "badge badge-danger" : "badge badge-primary"}>{u.role}</span>
+              </td>
+              <td>{u.enrolledCount}</td>
+              <td>{u.revenueSharePct}</td>
+              <td>
+                <span className={u.isActive ? "badge badge-success" : "badge badge-warning"}>
+                  {u.isActive ? "active" : "inactive"}
+                </span>
+              </td>
+              <td>{new Date(u.createdAt).toLocaleDateString("id-ID")}</td>
+              <td>
+                <div className="flex gap-2">
+                  <button type="button" className="btn btn-secondary btn-sm" disabled={busy} onClick={() => startEdit(u)}>
+                    Edit
+                  </button>
+                  <button type="button" className="btn btn-secondary btn-sm" disabled={busy} onClick={() => remove(u)}>
+                    Delete
+                  </button>
+                </div>
+              </td>
+            </tr>
+          ))
+        }
+      </AdminDataGrid>
+      <AdminFormDialog title={editId == null ? "Add user" : "Edit user"} open={open} onClose={() => setOpen(false)}>
+        <div className="grid gap-3">
+          <label>
+            <span className="label">Name</span>
+            <input className="input" value={values.name} onChange={(e) => setValues((v) => ({ ...v, name: e.target.value }))} />
+          </label>
+          <label>
+            <span className="label">Email</span>
+            <input
+              className="input"
+              type="email"
+              value={values.email}
+              onChange={(e) => setValues((v) => ({ ...v, email: e.target.value }))}
+            />
+          </label>
+          <label>
+            <span className="label">WhatsApp</span>
+            <input
+              className="input"
+              value={values.whatsappNumber}
+              onChange={(e) => setValues((v) => ({ ...v, whatsappNumber: e.target.value }))}
+            />
+          </label>
+          <label>
+            <span className="label">Avatar URL</span>
+            <input
+              className="input"
+              value={values.avatarUrl}
+              onChange={(e) => setValues((v) => ({ ...v, avatarUrl: e.target.value }))}
+            />
+          </label>
+          <label>
+            <span className="label">Role</span>
+            <select
+              className="input"
+              value={values.role}
+              onChange={(e) => setValues((v) => ({ ...v, role: e.target.value as UserRow["role"] }))}
+            >
+              <option value="user">user</option>
+              <option value="instructor">instructor</option>
+              <option value="admin">admin</option>
+            </select>
+          </label>
+          <label>
+            <span className="label">Revenue share %</span>
+            <input
+              className="input"
+              value={values.revenueSharePct}
+              onChange={(e) => setValues((v) => ({ ...v, revenueSharePct: e.target.value }))}
+            />
+          </label>
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={values.isActive}
+              onChange={(e) => setValues((v) => ({ ...v, isActive: e.target.checked }))}
+            />
+            <span className="text-sm font-semibold">Active</span>
+          </label>
+        </div>
+        {error ? <p className="mt-3 text-sm text-[var(--red)]">{error}</p> : null}
+        <div className="mt-4 flex justify-end gap-2">
+          <button type="button" className="btn btn-secondary btn-sm" onClick={() => setOpen(false)}>
+            Cancel
+          </button>
+          <button type="button" className="btn btn-primary btn-sm" disabled={busy} onClick={save}>
+            {busy ? "Saving..." : "Save"}
+          </button>
+        </div>
+      </AdminFormDialog>
+    </div>
+  );
+}

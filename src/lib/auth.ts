@@ -27,33 +27,38 @@ export function getAuthOptions(): NextAuthOptions {
         return true;
       },
       async jwt({ token, user, account }) {
-        if (user?.email) {
-          let dbUser = await getUserByEmail(user.email);
-          if (!dbUser) {
-            dbUser = await createUser({
-              name: user.name ?? user.email,
-              email: user.email,
-              googleId: account?.providerAccountId ?? null,
-              avatarUrl: user.image ?? null,
-              role: "user",
-            });
-          }
-          await updateUserLastLogin(dbUser.id);
-          token.id = String(dbUser.id);
-          token.role = dbUser.role;
-        } else if (token.email && !token.id) {
-          const dbUser = await getUserByEmail(token.email);
-          if (dbUser) {
-            token.id = String(dbUser.id);
-            token.role = dbUser.role;
-          }
+        const email = (user?.email ?? (typeof token.email === "string" ? token.email : "")).trim();
+        if (!email) return token;
+
+        const now = Date.now();
+        const stale = !token.roleCheckedAt || now - token.roleCheckedAt > 10 * 60 * 1000;
+        const needDb = Boolean(user?.email) || !token.id || !token.role || stale;
+        if (!needDb) return token;
+
+        let dbUser = await getUserByEmail(email);
+        if (!dbUser) {
+          if (!user?.email) return token;
+          dbUser = await createUser({
+            name: user.name ?? email,
+            email,
+            googleId: account?.providerAccountId ?? null,
+            avatarUrl: user.image ?? null,
+            role: "user",
+          });
         }
+        if (user?.email) await updateUserLastLogin(dbUser.id);
+        token.id = String(dbUser.id);
+        token.role = dbUser.role;
+        token.email = dbUser.email;
+        token.revenueSharePct = dbUser.revenueSharePct;
+        token.roleCheckedAt = now;
         return token;
       },
       async session({ session, token }) {
         if (session.user) {
           session.user.id = token.id ?? "";
           session.user.role = token.role ?? "user";
+          session.user.revenueSharePct = token.revenueSharePct;
         }
         return session;
       },
@@ -78,11 +83,3 @@ export function getAdminPath() {
   return process.env["ADMIN_PATH"] ?? "fh-admin";
 }
 
-export function isAdminEmail(email: string | null | undefined) {
-  const list = (process.env["ADMIN_EMAILS"] ?? "")
-    .split(",")
-    .map((e) => e.trim().toLowerCase())
-    .filter(Boolean);
-  if (!email) return false;
-  return list.includes(email.toLowerCase());
-}

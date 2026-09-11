@@ -1,6 +1,9 @@
 import { notFound, redirect } from "next/navigation";
-import { checkEnrollment } from "@/lib/db/enrollments.queries";
-import { getLessonById } from "@/lib/db/lessons.queries";
+import { CoursePlayer } from "@/components/course/CoursePlayer";
+import { getAdminPath } from "@/lib/auth";
+import { getCourseById } from "@/lib/db/courses.queries";
+import { canAccessCoursePlayer } from "@/lib/db/enrollments.queries";
+import { listCoursePlayerCurriculum } from "@/lib/db/lessons.queries";
 import { auth } from "@/lib/session";
 
 export default async function LessonPage({
@@ -10,44 +13,59 @@ export default async function LessonPage({
 }) {
   const session = await auth();
   const { courseId, lessonId } = await params;
+  const cid = Number(courseId);
+  const lid = Number(lessonId);
   if (!session?.user.id) redirect("/auth/signin");
-  const enrolled = await checkEnrollment(Number(session.user.id), Number(courseId));
-  if (!enrolled) redirect(`/checkout?courseId=${courseId}`);
 
-  const lesson = await getLessonById(Number(lessonId));
-  if (!lesson) notFound();
+  const access = await canAccessCoursePlayer(Number(session.user.id), session.user.role, cid);
+  if (!access.allowed) redirect(`/checkout?courseId=${cid}`);
+
+  const course = await getCourseById(cid);
+  if (!course) notFound();
+
+  const sections = await listCoursePlayerCurriculum(cid);
+  const flat = sections.flatMap((s) => s.lessons);
+  const idx = flat.findIndex((l) => l.id === lid);
+  if (idx < 0) notFound();
+  const current = flat[idx];
+  const prevId = idx > 0 ? flat[idx - 1].id : null;
+  const nextId = idx < flat.length - 1 ? flat[idx + 1].id : null;
 
   const withinWindow =
-    lesson.contentType === "live_class" &&
-    lesson.liveClassDatetime &&
-    Date.now() >= lesson.liveClassDatetime.getTime() - 30 * 60 * 1000;
+    current.contentType === "live_class" &&
+    current.liveClassDatetime &&
+    Date.now() >= current.liveClassDatetime.getTime() - 30 * 60 * 1000;
+  const liveJoinUrl = current.contentType === "live_class" && (access.preview || withinWindow) ? current.liveClassUrl : null;
+
+  const sidebar = sections.map((s) => ({
+    ...s,
+    lessons: s.lessons.map((l) => ({
+      ...l,
+      youtubeVideoId: null,
+      liveClassUrl: null,
+      documentUrl: null,
+      textContent: null,
+    })),
+  }));
+
+  const backHref =
+    session.user.role === "instructor"
+      ? "/instructor/courses"
+      : session.user.role === "admin"
+        ? `/${getAdminPath()}/courses`
+        : "/dashboard";
 
   return (
-    <main className="mx-auto max-w-4xl px-4 py-8">
-      <h1 className="mb-4 text-2xl font-extrabold">{lesson.title}</h1>
-      {lesson.contentType === "youtube_video" && lesson.youtubeVideoId ? (
-        <iframe
-          className="aspect-video w-full rounded-[var(--r-lg)]"
-          src={`https://www.youtube-nocookie.com/embed/${lesson.youtubeVideoId}`}
-          title={lesson.title}
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-          allowFullScreen
-        />
-      ) : null}
-      {lesson.contentType === "live_class" ? (
-        <div className="card">
-          {withinWindow && lesson.liveClassUrl ? (
-            <a href={lesson.liveClassUrl} className="btn btn-primary btn-default" target="_blank" rel="noreferrer">
-              Join live class
-            </a>
-          ) : (
-            <p className="text-sm text-[var(--text-3)]">
-              Join link unlocks 30 minutes before class start.
-            </p>
-          )}
-        </div>
-      ) : null}
-      {lesson.description ? <p className="mt-4 text-sm text-[var(--text-2)]">{lesson.description}</p> : null}
-    </main>
+    <CoursePlayer
+      courseId={cid}
+      courseTitle={course.title}
+      current={current}
+      sections={sidebar}
+      prevId={prevId}
+      nextId={nextId}
+      preview={access.preview}
+      liveJoinUrl={liveJoinUrl}
+      backHref={backHref}
+    />
   );
 }

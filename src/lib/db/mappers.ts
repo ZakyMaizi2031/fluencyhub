@@ -54,6 +54,7 @@ export function mapCourse(row: Row): Course {
     maxStudents: row.max_students == null ? null : asNum(row.max_students),
     language: String(row.language),
     level: row.level as Course["level"],
+    marketingTag: (row.marketing_tag as string) ?? (row.marketingTag as string) ?? null,
     platformFeePct: String(row.platform_fee_pct),
     createdAt: asDate(row.created_at),
     updatedAt: asDate(row.updated_at),

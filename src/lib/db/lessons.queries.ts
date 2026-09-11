@@ -1,6 +1,173 @@
-import type { Lesson } from "@/types/db";
+import type { Lesson, Section } from "@/types/db";
 import { sql } from "./client";
-import { mapLesson } from "./mappers";
+import { mapLesson, mapSection } from "./mappers";
+
+export type InstructorCurriculumSection = Section & { lessons: Lesson[] };
+
+export type PlayerLesson = {
+  id: number;
+  sectionId: number;
+  title: string;
+  contentType: Lesson["contentType"];
+  youtubeVideoId: string | null;
+  liveClassUrl: string | null;
+  liveClassDatetime: Date | null;
+  documentUrl: string | null;
+  textContent: string | null;
+  description: string | null;
+  durationMinutes: number;
+  isFreePreview: boolean;
+};
+
+export type PlayerSection = { id: number; title: string; lessons: PlayerLesson[] };
+
+export async function listCoursePlayerCurriculum(courseId: number): Promise<PlayerSection[]> {
+  const tree = await listInstructorCurriculum(courseId);
+  return tree.map((s) => ({
+    id: s.id,
+    title: s.title,
+    lessons: s.lessons.map((l) => ({
+      id: l.id,
+      sectionId: l.sectionId,
+      title: l.title,
+      contentType: l.contentType,
+      youtubeVideoId: l.youtubeVideoId,
+      liveClassUrl: l.liveClassUrl,
+      liveClassDatetime: l.liveClassDatetime,
+      documentUrl: l.documentUrl,
+      textContent: l.textContent,
+      description: l.description,
+      durationMinutes: l.durationMinutes ?? 0,
+      isFreePreview: l.isFreePreview,
+    })),
+  }));
+}
+
+export async function getFirstLessonIdForCourse(courseId: number): Promise<number | null> {
+  const rows = await sql`
+    SELECT l.id FROM lessons l
+    JOIN sections s ON s.id = l.section_id
+    WHERE s.course_id = ${courseId} AND l.deleted_at IS NULL
+    ORDER BY s.sort_order ASC, l.sort_order ASC, l.id ASC
+    LIMIT 1
+  `;
+  return rows[0] ? Number((rows[0] as { id: unknown }).id) : null;
+}
+
+export async function listInstructorCurriculum(courseId: number): Promise<InstructorCurriculumSection[]> {
+  const sections = await sql`
+    SELECT * FROM sections WHERE course_id = ${courseId} ORDER BY sort_order ASC
+  `;
+  const lessons = await sql`
+    SELECT l.* FROM lessons l
+    JOIN sections s ON s.id = l.section_id
+    WHERE s.course_id = ${courseId} AND l.deleted_at IS NULL
+    ORDER BY l.sort_order ASC, l.id ASC
+  `;
+  const bySection = new Map<number, Lesson[]>();
+  for (const raw of lessons) {
+    const lesson = mapLesson(raw as Record<string, unknown>);
+    const list = bySection.get(lesson.sectionId) ?? [];
+    list.push(lesson);
+    bySection.set(lesson.sectionId, list);
+  }
+  return sections.map((raw) => {
+    const section = mapSection(raw as Record<string, unknown>);
+    return { ...section, lessons: bySection.get(section.id) ?? [] };
+  });
+}
+
+export async function getLessonCourseOwner(lessonId: number): Promise<{ courseId: number; instructorId: number } | null> {
+  const rows = await sql`
+    SELECT c.id AS course_id, c.instructor_id
+    FROM lessons l
+    JOIN sections s ON s.id = l.section_id
+    JOIN courses c ON c.id = s.course_id
+    WHERE l.id = ${lessonId} AND l.deleted_at IS NULL
+  `;
+  const row = rows[0] as { course_id: unknown; instructor_id: unknown } | undefined;
+  if (!row) return null;
+  return { courseId: Number(row.course_id), instructorId: Number(row.instructor_id) };
+}
+
+export function extractYoutubeId(url: string): string | null {
+  const m = url.match(/(?:youtu\.be\/|v=|embed\/)([A-Za-z0-9_-]{6,})/);
+  return m?.[1] ?? null;
+}
+
+export async function createLessonForSection(data: {
+  sectionId: number;
+  title: string;
+  contentType: Lesson["contentType"];
+  youtubeUrl?: string | null;
+  liveClassUrl?: string | null;
+  liveClassDatetime?: Date | null;
+  liveClassPlatform?: Lesson["liveClassPlatform"];
+  documentUrl?: string | null;
+  textContent?: string | null;
+  durationMinutes?: number | null;
+  isFreePreview: boolean;
+}): Promise<Lesson> {
+  const youtubeId = data.youtubeUrl ? extractYoutubeId(data.youtubeUrl) : null;
+  const rows = await sql`
+    INSERT INTO lessons (
+      section_id, title, content_type, youtube_url, youtube_video_id,
+      live_class_url, live_class_datetime, live_class_platform,
+      document_url, text_content, duration_minutes, is_free_preview, sort_order
+    ) VALUES (
+      ${data.sectionId}, ${data.title}, ${data.contentType},
+      ${data.youtubeUrl ?? null}, ${youtubeId},
+      ${data.liveClassUrl ?? null}, ${data.liveClassDatetime ?? null}, ${data.liveClassPlatform ?? null},
+      ${data.documentUrl ?? null}, ${data.textContent ?? null},
+      ${data.durationMinutes ?? 0}, ${data.isFreePreview},
+      COALESCE((SELECT MAX(sort_order) + 1 FROM lessons WHERE section_id = ${data.sectionId} AND deleted_at IS NULL), 1)
+    )
+    RETURNING *
+  `;
+  return mapLesson(rows[0] as Record<string, unknown>);
+}
+
+export async function updateLessonForSection(
+  id: number,
+  data: {
+    sectionId?: number;
+    title?: string;
+    contentType?: Lesson["contentType"];
+    youtubeUrl?: string | null;
+    liveClassUrl?: string | null;
+    liveClassDatetime?: Date | null;
+    liveClassPlatform?: Lesson["liveClassPlatform"];
+    documentUrl?: string | null;
+    textContent?: string | null;
+    durationMinutes?: number | null;
+    isFreePreview?: boolean;
+  },
+): Promise<Lesson> {
+  const youtubeId = data.youtubeUrl ? extractYoutubeId(data.youtubeUrl) : null;
+  const rows = await sql`
+    UPDATE lessons SET
+      section_id = COALESCE(${data.sectionId ?? null}, section_id),
+      title = COALESCE(${data.title ?? null}, title),
+      content_type = COALESCE(${data.contentType ?? null}, content_type),
+      youtube_url = CASE WHEN ${data.youtubeUrl !== undefined} THEN ${data.youtubeUrl ?? null} ELSE youtube_url END,
+      youtube_video_id = CASE WHEN ${data.youtubeUrl !== undefined} THEN ${youtubeId} ELSE youtube_video_id END,
+      live_class_url = CASE WHEN ${data.liveClassUrl !== undefined} THEN ${data.liveClassUrl ?? null} ELSE live_class_url END,
+      live_class_datetime = CASE WHEN ${data.liveClassDatetime !== undefined} THEN ${data.liveClassDatetime ?? null} ELSE live_class_datetime END,
+      live_class_platform = CASE WHEN ${data.liveClassPlatform !== undefined} THEN ${data.liveClassPlatform ?? null} ELSE live_class_platform END,
+      document_url = CASE WHEN ${data.documentUrl !== undefined} THEN ${data.documentUrl ?? null} ELSE document_url END,
+      text_content = CASE WHEN ${data.textContent !== undefined} THEN ${data.textContent ?? null} ELSE text_content END,
+      duration_minutes = COALESCE(${data.durationMinutes ?? null}, duration_minutes),
+      is_free_preview = COALESCE(${data.isFreePreview ?? null}, is_free_preview),
+      updated_at = NOW()
+    WHERE id = ${id} AND deleted_at IS NULL
+    RETURNING *
+  `;
+  return mapLesson(rows[0] as Record<string, unknown>);
+}
+
+export async function softDeleteLesson(id: number): Promise<void> {
+  await sql`UPDATE lessons SET deleted_at = NOW(), updated_at = NOW() WHERE id = ${id}`;
+}
 
 export async function listLessonsBySection(sectionId: number): Promise<Lesson[]> {
   const rows = await sql`

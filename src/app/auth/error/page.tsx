@@ -8,7 +8,7 @@ export default async function AuthErrorPage({
   const { error } = await searchParams;
   const message =
     error === "NotStaff"
-      ? "This Google account is not registered as instructor or admin."
+      ? "This Google account exists as a member in users. Ask an admin to set role to admin or instructor, then sign in again at /auth/staff."
       : error === "AccessDenied"
         ? "You do not have access to that area."
         : "Sign-in failed. Please try again.";
@@ -18,9 +18,14 @@ export default async function AuthErrorPage({
       <div className="card">
         <h1 className="mb-2 text-2xl font-extrabold">Authentication error</h1>
         <p className="mb-6 text-sm text-[var(--text-3)]">{message}</p>
-        <Link href="/" className="btn btn-primary btn-default">
-          Back home
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          <Link href="/auth/staff" className="btn btn-primary btn-default">
+            Staff sign in
+          </Link>
+          <Link href="/" className="btn btn-secondary btn-default">
+            Back home
+          </Link>
+        </div>
       </div>
     </main>
   );

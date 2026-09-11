@@ -15,9 +15,12 @@ export async function POST(req: Request) {
   if (file.size > 5 * 1024 * 1024) {
     return NextResponse.json({ error: "Max 5MB" }, { status: 400 });
   }
-  const allowed = ["image/jpeg", "image/png", "application/pdf"];
+  const allowed = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
   if (!allowed.includes(file.type)) {
-    return NextResponse.json({ error: "JPG, PNG, or PDF only" }, { status: 400 });
+    return NextResponse.json({ error: "JPG, PNG, WebP, or PDF only" }, { status: 400 });
+  }
+  if (folder === "thumbnails" && session.user.role !== "admin") {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
   const result = await uploadFile({ file, folder, filename: file.name });
   return NextResponse.json({ data: result });

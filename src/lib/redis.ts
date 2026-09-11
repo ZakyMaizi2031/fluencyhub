@@ -28,7 +28,13 @@ export const paymentRatelimit = redis
 
 export const CACHE_KEYS = {
   publishedCourses: "cache:published-courses",
+  landing: "cache:landing",
 };
+
+export async function cacheInvalidate(key: string): Promise<void> {
+  if (!redis) return;
+  await redis.del(key);
+}
 
 export async function cacheGet<T>(key: string): Promise<T | null> {
   if (!redis) return null;

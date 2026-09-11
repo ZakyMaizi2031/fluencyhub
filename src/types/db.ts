@@ -65,6 +65,7 @@ export interface Course {
   maxStudents: number | null;
   language: string;
   level: CourseLevel;
+  marketingTag: string | null;
   platformFeePct: string;
   createdAt: Date;
   updatedAt: Date;
@@ -208,6 +209,65 @@ export interface Enrollment {
   completedAt: Date | null;
   expiresAt: Date | null;
   enrolledAt: Date;
+  updatedAt: Date;
+}
+
+export interface PublishedCourseCard extends Course {
+  instructorName: string;
+}
+
+export interface SiteSetting {
+  id: number;
+  key: string;
+  value: string;
+  updatedAt: Date;
+}
+
+export interface LandingPainPoint {
+  id: number;
+  icon: string;
+  iconBg: string;
+  iconColor: string;
+  title: string;
+  description: string;
+  sortOrder: number;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface LandingMethodItem {
+  id: number;
+  tab: "online" | "hybrid";
+  icon: string;
+  title: string;
+  description: string;
+  sortOrder: number;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface Testimonial {
+  id: number;
+  name: string;
+  role: string;
+  quote: string;
+  avatarUrl: string | null;
+  rating: number;
+  sortOrder: number;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface Faq {
+  id: number;
+  question: string;
+  answer: string;
+  sortOrder: number;
+  isActive: boolean;
+  createdAt: Date;
   updatedAt: Date;
 }
 

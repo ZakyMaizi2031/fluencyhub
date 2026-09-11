@@ -1,10 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { getCourseById } from "@/lib/db/courses.queries";
 import { getOrderById, updateOrderStatus } from "@/lib/db/orders.queries";
 import { getPaymentProofById, updatePaymentProofStatus } from "@/lib/db/payment-proofs.queries";
-import { isAdminEmail } from "@/lib/auth";
-import { markOrderPaid } from "@/lib/orders";
+import { approveManualOrder } from "@/lib/orders";
 import { auth } from "@/lib/session";
 
 const Schema = z.object({
@@ -14,7 +12,7 @@ const Schema = z.object({
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
-  if (!session?.user || session.user.role !== "admin" || !isAdminEmail(session.user.email)) {
+  if (!session?.user || session.user.role !== "admin") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const { id } = await params;
@@ -32,9 +30,6 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     return NextResponse.json({ data: { status: "rejected" } });
   }
 
-  await updatePaymentProofStatus(proof.id, "approved", Number(session.user.id));
-  const course = await getCourseById(order.courseId);
-  if (!course) return NextResponse.json({ error: "Course missing" }, { status: 400 });
-  const paid = await markOrderPaid(order, course);
+  const paid = await approveManualOrder(order.id, Number(session.user.id));
   return NextResponse.json({ data: { status: "approved", order: paid } });
 }

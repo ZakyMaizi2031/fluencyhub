@@ -48,6 +48,16 @@ export async function listPendingProofs(): Promise<
   });
 }
 
+export async function approveProofsForOrder(orderId: number, verifiedBy: number): Promise<void> {
+  await sql`
+    UPDATE payment_proofs SET
+      status = 'approved',
+      verified_by = ${verifiedBy},
+      verified_at = NOW()
+    WHERE order_id = ${orderId} AND status = 'pending'
+  `;
+}
+
 export async function updatePaymentProofStatus(
   id: number,
   status: "approved" | "rejected",

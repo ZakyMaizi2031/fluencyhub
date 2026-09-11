@@ -93,6 +93,79 @@ export async function updateOrderStatus(
   return mapOrder(rows[0] as Record<string, unknown>);
 }
 
+export type AdminOverviewStats = {
+  todayRevenue: string;
+  monthRevenue: string;
+  learnerCount: number;
+  pendingProofs: number;
+  publishedCourses: number;
+  liveClassesToday: number;
+};
+
+export async function getAdminOverviewStats(): Promise<AdminOverviewStats> {
+  const [today, month, learners, proofs, courses, live] = await Promise.all([
+    sql`
+      SELECT COALESCE(SUM(total_amount), 0) AS total
+      FROM orders
+      WHERE status = 'paid' AND paid_at >= date_trunc('day', NOW())
+    `,
+    sql`
+      SELECT COALESCE(SUM(total_amount), 0) AS total
+      FROM orders
+      WHERE status = 'paid' AND paid_at >= date_trunc('month', NOW())
+    `,
+    sql`SELECT COUNT(*) AS n FROM users WHERE role = 'user' AND deleted_at IS NULL AND is_active = TRUE`,
+    sql`SELECT COUNT(*) AS n FROM payment_proofs WHERE status = 'pending'`,
+    sql`SELECT COUNT(*) AS n FROM courses WHERE status = 'published' AND deleted_at IS NULL`,
+    sql`
+      SELECT COUNT(*) AS n FROM lessons
+      WHERE deleted_at IS NULL
+        AND content_type = 'live_class'
+        AND live_class_datetime IS NOT NULL
+        AND live_class_datetime >= date_trunc('day', NOW())
+        AND live_class_datetime < date_trunc('day', NOW()) + interval '1 day'
+    `,
+  ]);
+  return {
+    todayRevenue: String((today[0] as { total: unknown }).total ?? "0"),
+    monthRevenue: String((month[0] as { total: unknown }).total ?? "0"),
+    learnerCount: Number((learners[0] as { n: unknown }).n ?? 0),
+    pendingProofs: Number((proofs[0] as { n: unknown }).n ?? 0),
+    publishedCourses: Number((courses[0] as { n: unknown }).n ?? 0),
+    liveClassesToday: Number((live[0] as { n: unknown }).n ?? 0),
+  };
+}
+
+export type AdminOrderRow = Order & {
+  buyerName: string;
+  buyerEmail: string;
+  methodName: string | null;
+  courseTitle: string;
+};
+
+export async function listOrdersForAdmin(limit = 50): Promise<AdminOrderRow[]> {
+  const rows = await sql`
+    SELECT o.*, u.name AS buyer_name, u.email AS buyer_email,
+           pm.name AS method_name, c.title AS course_title
+    FROM orders o
+    JOIN users u ON u.id = o.user_id
+    LEFT JOIN payment_methods pm ON pm.id = o.payment_method_id
+    JOIN courses c ON c.id = o.course_id
+    ORDER BY o.created_at DESC
+    LIMIT ${limit}
+  `;
+  return rows.map((r) => {
+    const row = r as Record<string, unknown>;
+    return {
+      ...mapOrder(row),
+      buyerName: String(row.buyer_name ?? ""),
+      buyerEmail: String(row.buyer_email ?? ""),
+      methodName: row.method_name == null ? null : String(row.method_name),
+      courseTitle: String(row.course_title ?? ""),
+    };
+  });
+}
+
 export async function listOrdersForUser(userId: number): Promise<Order[]> {
   const rows = await sql`
     SELECT * FROM orders WHERE user_id = ${userId} ORDER BY created_at DESC

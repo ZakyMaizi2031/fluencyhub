@@ -17,6 +17,20 @@ export async function getPaymentMethodById(id: number): Promise<PaymentMethod | 
   return rows[0] ? mapPaymentMethod(rows[0] as Record<string, unknown>) : null;
 }
 
+export async function listAllPaymentMethodsAdmin(): Promise<PaymentMethod[]> {
+  const rows = await sql`SELECT * FROM payment_methods ORDER BY sort_order ASC`;
+  return rows.map((r) => mapPaymentMethod(r as Record<string, unknown>));
+}
+
+export async function setPaymentMethodActive(id: number, isActive: boolean): Promise<PaymentMethod> {
+  const rows = await sql`
+    UPDATE payment_methods SET is_active = ${isActive}, updated_at = NOW()
+    WHERE id = ${id}
+    RETURNING *
+  `;
+  return mapPaymentMethod(rows[0] as Record<string, unknown>);
+}
+
 export async function getInstructionsForMethod(paymentMethodId: number): Promise<PaymentInstruction[]> {
   const rows = await sql`
     SELECT * FROM payment_instructions

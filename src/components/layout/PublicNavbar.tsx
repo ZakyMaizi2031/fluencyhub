@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { LandingIcon } from "@/components/landing/LandingIcon";
 import { auth } from "@/lib/session";
 
 export async function PublicNavbar() {
@@ -6,9 +7,14 @@ export async function PublicNavbar() {
 
   return (
     <nav className="glass-nav sticky top-0 z-50">
-      <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
-        <Link href="/" className="flex items-center gap-2 font-[family-name:var(--font-heading)] text-lg font-extrabold text-[var(--brand)]">
-          FluencyHub
+      <div className="mx-auto flex h-[62px] max-w-[1200px] items-center justify-between gap-4 px-5">
+        <Link href="/" className="flex shrink-0 items-center gap-2">
+          <span className="flex h-8 w-8 items-center justify-center rounded-[var(--r-md)] bg-[var(--brand)]">
+            <LandingIcon name="MessageCircle" color="#fff" />
+          </span>
+          <span className="font-[family-name:var(--font-heading)] text-lg font-extrabold tracking-tight">
+            Fluency<span className="text-[var(--brand)]">Hub</span>
+          </span>
         </Link>
         <div className="hidden items-center gap-6 md:flex">
           <a href="/#masalah" className="nav-link">Masalah</a>
@@ -16,15 +22,20 @@ export async function PublicNavbar() {
           <a href="/#harga" className="nav-link">Harga</a>
           <a href="/#testimoni" className="nav-link">Testimoni</a>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2">
           {session?.user ? (
             <Link href="/dashboard" className="btn btn-primary btn-default">
               Dashboard
             </Link>
           ) : (
-            <Link href="/auth/signin" className="btn btn-secondary btn-default">
-              Log in Member
-            </Link>
+            <>
+              <Link href="/auth/signin" className="btn btn-secondary btn-default hidden md:inline-flex">
+                <LandingIcon name="LogIn" color="var(--text-2)" /> Log in
+              </Link>
+              <a href="/#harga" className="btn btn-primary btn-default">
+                Mulai Gratis
+              </a>
+            </>
           )}
         </div>
       </div>
