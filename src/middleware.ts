@@ -7,7 +7,7 @@ export async function middleware(req: NextRequest) {
   const adminPath = `/${process.env.ADMIN_PATH ?? "fh-admin"}`;
   const token = await getToken({
     req,
-    secret: process.env.NEXTAUTH_SECRET ?? process.env.AUTH_SECRET,
+    secret: (process.env["NEXTAUTH_SECRET"] || process.env["AUTH_SECRET"] || "").trim(),
   });
 
   if (pathname.startsWith("/dashboard")) {
