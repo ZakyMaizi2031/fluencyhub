@@ -5,7 +5,10 @@ import { getToken } from "next-auth/jwt";
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
   const adminPath = `/${process.env.ADMIN_PATH ?? "fh-admin"}`;
-  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+  const token = await getToken({
+    req,
+    secret: process.env.NEXTAUTH_SECRET ?? process.env.AUTH_SECRET,
+  });
 
   if (pathname.startsWith("/dashboard")) {
     if (!token) {
