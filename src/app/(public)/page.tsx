@@ -51,15 +51,17 @@ export default async function LandingPage() {
           <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
             {courses.map((course, i) => (
               <article key={course.id} className="card flex flex-col">
-                {course.thumbnailUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={course.thumbnailUrl}
-                    alt=""
-                    className="mb-4 h-36 w-full rounded-[var(--r-md)] object-cover"
-                  />
-                ) : null}
-                <h3 className="font-[family-name:var(--font-heading)] text-lg font-bold">{course.title}</h3>
+                <Link href={`/courses/${course.slug}`}>
+                  {course.thumbnailUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={course.thumbnailUrl}
+                      alt=""
+                      className="mb-4 h-36 w-full rounded-[var(--r-md)] object-cover"
+                    />
+                  ) : null}
+                  <h3 className="font-[family-name:var(--font-heading)] text-lg font-bold">{course.title}</h3>
+                </Link>
                 <p className="mt-2 flex-1 text-sm text-[var(--text-3)]">{course.shortDescription}</p>
                 <div className="mt-4 flex items-end justify-between">
                   <div>
@@ -71,10 +73,10 @@ export default async function LandingPage() {
                     <p className="text-xl font-extrabold text-[var(--brand)]">{formatIdr(course.price)}</p>
                   </div>
                   <Link
-                    href={`/checkout?courseId=${course.id}`}
+                    href={`/courses/${course.slug}`}
                     className={`btn btn-default ${i === 1 ? "btn-primary" : "btn-secondary"}`}
                   >
-                    Buy Now
+                    Lihat kelas
                   </Link>
                 </div>
               </article>

@@ -4,7 +4,10 @@ import { mapPaymentInstruction, mapPaymentMethod } from "./mappers";
 
 export async function getActivePaymentMethods(): Promise<PaymentMethod[]> {
   const rows = await sql`
-    SELECT * FROM payment_methods WHERE is_active = TRUE ORDER BY sort_order ASC
+    SELECT
+      id, code, name, logo_url AS "logoUrl", type, provider,
+      admin_fee_flat, admin_fee_pct, is_active, is_redirect, sort_order, created_at, updated_at
+    FROM payment_methods WHERE is_active = TRUE ORDER BY sort_order ASC
   `;
   return rows.map((r) => mapPaymentMethod(r as Record<string, unknown>));
 }

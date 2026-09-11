@@ -104,7 +104,7 @@ export function mapPaymentMethod(row: Row): PaymentMethod {
     id: asNum(row.id),
     code: String(row.code),
     name: String(row.name),
-    logoUrl: (row.logo_url as string) ?? null,
+    logoUrl: ((row.logo_url ?? row.logoUrl) as string) ?? null,
     type: row.type as PaymentMethod["type"],
     provider: row.provider as PaymentMethod["provider"],
     adminFeeFlat: asNum(row.admin_fee_flat),

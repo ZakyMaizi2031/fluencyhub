@@ -3,7 +3,7 @@ import { z } from "zod";
 import { getCouponByCode, incrementCouponUse } from "@/lib/db/coupons.queries";
 import { getCourseById } from "@/lib/db/courses.queries";
 import { checkEnrollment } from "@/lib/db/enrollments.queries";
-import { createOrder, getActiveOrderForUserCourse } from "@/lib/db/orders.queries";
+import { cancelOrder, createOrder, getActiveOrderForUserCourse } from "@/lib/db/orders.queries";
 import { getPaymentMethodById } from "@/lib/db/payment-methods.queries";
 import { createPaymentLog } from "@/lib/db/payment-logs.queries";
 import { generateOrderNumber } from "@/lib/orders";
@@ -47,7 +47,13 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Already enrolled" }, { status: 409 });
   }
   if (existing) {
-    return NextResponse.json({ data: existing }, { status: 200 });
+    if (existing.status === "paid" || existing.status === "pending_verification") {
+      return NextResponse.json({ error: "You already have an order for this course" }, { status: 409 });
+    }
+    if (existing.paymentMethodId === paymentMethodId) {
+      return NextResponse.json({ data: existing }, { status: 200 });
+    }
+    await cancelOrder(existing.id);
   }
 
   const subtotal = Number(course.price);

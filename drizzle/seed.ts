@@ -17,7 +17,10 @@ async function seed() {
   await sql`
     INSERT INTO users (id, google_id, name, email, role, is_active, revenue_share_pct)
     VALUES (1, 'google_admin_001', 'FluencyHub Admin', ${adminEmail}, 'admin', TRUE, 0.00)
-    ON CONFLICT (email) DO UPDATE SET role = 'admin', is_active = TRUE
+    ON CONFLICT (id) DO UPDATE SET
+      email = EXCLUDED.email,
+      role = 'admin',
+      is_active = TRUE
   `;
 
   await sql`
@@ -25,13 +28,13 @@ async function seed() {
     (2, 'google_instr_001', 'Dr. Anindya Kusuma, M.Sc.', 'anindya@fluencyhub.id', '6281234567801', 'instructor', TRUE, 70.00),
     (3, 'google_instr_002', 'Rizky Pratama, M.Hum.', 'rizky@fluencyhub.id', '6281234567802', 'instructor', TRUE, 70.00),
     (4, 'google_instr_003', 'Sarah Maharani, B.Ed.', 'sarah@fluencyhub.id', '6281234567803', 'instructor', TRUE, 65.00)
-    ON CONFLICT (email) DO NOTHING
+    ON CONFLICT (id) DO NOTHING
   `;
 
   await sql`
     INSERT INTO users (id, google_id, name, email, whatsapp_number, role, is_active) VALUES
     (5, 'google_user_001', 'Budi Santoso', 'budi.santoso@gmail.com', '6281111110001', 'user', TRUE)
-    ON CONFLICT (email) DO NOTHING
+    ON CONFLICT (id) DO NOTHING
   `;
 
   await sql`SELECT setval('users_id_seq', GREATEST((SELECT MAX(id) FROM users), 20))`;
@@ -130,7 +133,16 @@ async function seed() {
      'Clarity, Precision, and Brevity.', 22, FALSE, 2),
     (3, 2, 'Data Presentation Vocabulary', 'youtube_video',
      'https://www.youtube.com/watch?v=Ks-_Mh1QhMc', 'Ks-_Mh1QhMc',
-     'Phrases for charts and trends.', 25, FALSE, 1)
+     'Phrases for charts and trends.', 25, FALSE, 1),
+    (11, 4, 'Welcome to Business English', 'youtube_video',
+     'https://www.youtube.com/watch?v=dQw4w9WgXcQ', 'dQw4w9WgXcQ',
+     'Course preview.', 8, TRUE, 1),
+    (12, 5, 'Welcome to Public Speaking', 'youtube_video',
+     'https://www.youtube.com/watch?v=dQw4w9WgXcQ', 'dQw4w9WgXcQ',
+     'Course preview.', 8, TRUE, 1),
+    (13, 6, 'Welcome to Interview Prep', 'youtube_video',
+     'https://www.youtube.com/watch?v=dQw4w9WgXcQ', 'dQw4w9WgXcQ',
+     'Course preview.', 8, TRUE, 1)
     ON CONFLICT (id) DO NOTHING
   `;
   await sql`SELECT setval('lessons_id_seq', 30)`;

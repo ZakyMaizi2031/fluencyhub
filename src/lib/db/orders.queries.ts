@@ -27,6 +27,15 @@ export async function getActiveOrderForUserCourse(
   return rows[0] ? mapOrder(rows[0] as Record<string, unknown>) : null;
 }
 
+export async function cancelOrder(id: number): Promise<Order> {
+  const rows = await sql`
+    UPDATE orders SET status = 'cancelled', updated_at = NOW()
+    WHERE id = ${id}
+    RETURNING *
+  `;
+  return mapOrder(rows[0] as Record<string, unknown>);
+}
+
 export async function createOrder(data: {
   userId: number;
   courseId: number;

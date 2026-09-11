@@ -1,7 +1,8 @@
 "use client";
 
 import { signIn } from "next-auth/react";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { PaymentMethodLogo } from "@/components/checkout/PaymentMethodLogo";
 import { SnapModal } from "@/components/checkout/SnapModal";
 import { VAInstructions } from "@/components/checkout/VAInstructions";
 import type { Course, PaymentInstruction, PaymentMethod } from "@/types/db";
@@ -10,7 +11,6 @@ import { formatIdr } from "@/lib/utils/cn";
 type Props = {
   course: Course;
   methods: PaymentMethod[];
-  instructionsByMethod: Record<number, PaymentInstruction[]>;
   user: { name: string; email: string; whatsappNumber: string | null } | null;
   midtransClientKey: string;
   midtransSnapScriptUrl: string;
@@ -21,7 +21,6 @@ const STEPS = ["Kelas", "Data Diri", "Bayar", "Konfirmasi"];
 export function CheckoutStepper({
   course,
   methods,
-  instructionsByMethod,
   user,
   midtransClientKey,
   midtransSnapScriptUrl,
@@ -41,11 +40,31 @@ export function CheckoutStepper({
   const [snapToken, setSnapToken] = useState<string | null>(null);
   const [vaNumber, setVaNumber] = useState<string | null>(null);
   const [qrString, setQrString] = useState<string | null>(null);
+  const [qrImage, setQrImage] = useState<string | null>(null);
+  const [instructions, setInstructions] = useState<PaymentInstruction[]>([]);
 
   const method = methods.find((m) => m.id === methodId) ?? null;
   const base = Number(course.price);
   const total = Math.max(0, base - discount);
-  const instructions = method ? (instructionsByMethod[method.id] ?? []) : [];
+
+  useEffect(() => {
+    if (!methodId) {
+      setInstructions([]);
+      return;
+    }
+    let cancelled = false;
+    fetch(`/api/payment-methods/${methodId}`)
+      .then((res) => res.json())
+      .then((json) => {
+        if (!cancelled) setInstructions(json.data?.instructions ?? []);
+      })
+      .catch(() => {
+        if (!cancelled) setInstructions([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [methodId]);
 
   const grouped = useMemo(() => {
     const groups: Record<string, PaymentMethod[]> = {};
@@ -79,6 +98,10 @@ export function CheckoutStepper({
     }
     setBusy(true);
     setError("");
+    setQrImage(null);
+    setQrString(null);
+    setVaNumber(null);
+    setSnapToken(null);
     try {
       if (wa) {
         await fetch("/api/users/me", {
@@ -122,6 +145,8 @@ export function CheckoutStepper({
       }
       if (path === "qris") {
         setQrString((paid.data?.qrString as string) ?? null);
+        setQrImage((paid.data?.qrImage as string) ?? null);
+        setVaNumber(null);
         setStep(6);
         return;
       }
@@ -297,6 +322,7 @@ export function CheckoutStepper({
                           checked={methodId === m.id}
                           onChange={() => setMethodId(m.id)}
                         />
+                        <PaymentMethodLogo src={m.logoUrl} name={m.name} code={m.code} />
                         <span className="font-semibold">{m.name}</span>
                       </label>
                     ))}
@@ -328,7 +354,10 @@ export function CheckoutStepper({
                   <span className="text-[var(--brand)]">{formatIdr(total)}</span>
                 </div>
               </div>
-              <p className="mb-4 text-sm font-semibold">{method?.name ?? "—"}</p>
+              <div className="mb-4 flex items-center gap-3">
+                {method ? <PaymentMethodLogo src={method.logoUrl} name={method.name} code={method.code} /> : null}
+                <p className="text-sm font-semibold">{method?.name ?? "—"}</p>
+              </div>
               <button type="button" className="btn btn-primary btn-full btn-lg" disabled={busy} onClick={pay}>
                 {busy ? "Memproses..." : "Bayar Sekarang"}
               </button>
@@ -337,11 +366,14 @@ export function CheckoutStepper({
 
           {step === 5 && (
             <div className="card">
-              <h2 className="mb-3 text-xl font-extrabold">Upload Bukti Transfer</h2>
+              <div className="mb-3 flex items-center gap-3">
+                {method ? <PaymentMethodLogo src={method.logoUrl} name={method.name} code={method.code} /> : null}
+                <h2 className="text-xl font-extrabold">Upload Bukti Transfer</h2>
+              </div>
               {instructions.map((ins) => (
                 <div key={ins.id} className="mb-4 text-sm text-[var(--text-2)]">
                   <p className="mb-2 font-semibold">{ins.title}</p>
-                  <div dangerouslySetInnerHTML={{ __html: ins.content }} />
+                  <div className="instruction-html" dangerouslySetInnerHTML={{ __html: ins.content }} />
                 </div>
               ))}
               <input
@@ -359,9 +391,13 @@ export function CheckoutStepper({
           {step === 6 && (
             <VAInstructions
               vaNumber={vaNumber}
-              qrString={qrString}
+              qrImage={qrImage}
               instructions={instructions}
-              title={qrString ? "Scan QRIS" : "Transfer / payment code"}
+              orderNumber={orderNumber}
+              methodName={method?.name}
+              methodCode={method?.code}
+              logoUrl={method?.logoUrl}
+              title={qrImage || qrString ? "Scan QRIS" : "Transfer / payment code"}
             />
           )}
           {step === 6 && orderNumber ? (

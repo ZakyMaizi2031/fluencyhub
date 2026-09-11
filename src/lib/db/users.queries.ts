@@ -7,6 +7,18 @@ export async function getUserByEmail(email: string): Promise<User | null> {
   return rows[0] ? mapUser(rows[0] as Record<string, unknown>) : null;
 }
 
+export async function getInstructorPublic(
+  id: number,
+): Promise<{ id: number; name: string; avatarUrl: string | null } | null> {
+  const rows = await sql`
+    SELECT id, name, avatar_url FROM users
+    WHERE id = ${id} AND deleted_at IS NULL AND role = 'instructor'
+  `;
+  const row = rows[0] as { id: unknown; name: string; avatar_url: string | null } | undefined;
+  if (!row) return null;
+  return { id: Number(row.id), name: row.name, avatarUrl: row.avatar_url };
+}
+
 export async function getUserById(id: number): Promise<User | null> {
   const rows = await sql`SELECT * FROM users WHERE id = ${id} AND deleted_at IS NULL`;
   return rows[0] ? mapUser(rows[0] as Record<string, unknown>) : null;

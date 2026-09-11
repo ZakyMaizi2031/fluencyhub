@@ -1,3 +1,5 @@
+import "server-only";
+
 function xenditKey() {
   return process.env.XENDIT_API_KEY ?? process.env.XENDIT_SECRET_KEY ?? "";
 }
@@ -6,18 +8,28 @@ function authHeader() {
   return `Basic ${Buffer.from(`${xenditKey()}:`).toString("base64")}`;
 }
 
-async function xenditFetch<T>(path: string, body: Record<string, unknown>): Promise<T> {
+async function xenditFetch<T>(
+  path: string,
+  body: Record<string, unknown>,
+  extraHeaders?: Record<string, string>,
+): Promise<T> {
   const res = await fetch(`https://api.xendit.co${path}`, {
     method: "POST",
     headers: {
       Authorization: authHeader(),
       "Content-Type": "application/json",
+      ...extraHeaders,
     },
     body: JSON.stringify(body),
   });
-  const json = (await res.json()) as T & { message?: string; error_code?: string };
+  const json = (await res.json()) as T & {
+    message?: string;
+    error_code?: string;
+    errors?: Array<{ path?: string; message?: string }>;
+  };
   if (!res.ok) {
-    throw new Error(json.message ?? json.error_code ?? `Xendit error ${res.status}`);
+    const detail = json.errors?.map((e) => e.message ?? e.path).filter(Boolean).join("; ");
+    throw new Error(detail || json.message || json.error_code || `Xendit error ${res.status}`);
   }
   return json;
 }
@@ -66,19 +78,78 @@ export async function createXenditVA(params: {
   });
 }
 
+function readQrString(json: {
+  id?: string;
+  qr_string?: string;
+  qr_code?: string;
+  actions?: Array<{ type?: string; descriptor?: string; value?: string }>;
+}): { id: string; qr_string: string } {
+  const fromAction = json.actions?.find(
+    (a) => a.descriptor === "QR_STRING" || a.descriptor === "QR_CODE" || a.type === "PRESENT_TO_CUSTOMER",
+  )?.value;
+  const value = json.qr_string ?? json.qr_code ?? fromAction ?? "";
+  if (!value) throw new Error("Xendit QRIS did not return a QR payload");
+  return { id: json.id ?? "", qr_string: value };
+}
+
 export async function createXenditQRIS(params: {
   externalId: string;
   amount: number;
 }) {
-  return xenditFetch<{
-    id: string;
-    qr_string: string;
-  }>("/qr_codes", {
-    reference_id: params.externalId,
-    type: "DYNAMIC",
-    currency: "IDR",
-    amount: Math.round(params.amount),
-  });
+  const amount = Math.round(params.amount);
+  const lastErrors: string[] = [];
+
+  try {
+    const json = await xenditFetch<{ id: string; qr_string?: string; qr_code?: string }>(
+      "/qr_codes",
+      {
+        reference_id: params.externalId,
+        type: "DYNAMIC",
+        currency: "IDR",
+        amount,
+      },
+      { "api-version": "2022-07-31" },
+    );
+    return readQrString(json);
+  } catch (error) {
+    lastErrors.push(error instanceof Error ? error.message : "QR Codes API failed");
+  }
+
+  try {
+    const json = await xenditFetch<{
+      payment_request_id?: string;
+      id?: string;
+      actions?: Array<{ type?: string; descriptor?: string; value?: string }>;
+    }>(
+      "/v3/payment_requests",
+      {
+        reference_id: params.externalId,
+        type: "PAY",
+        country: "ID",
+        currency: "IDR",
+        request_amount: amount,
+        channel_code: "QRIS",
+      },
+      { "api-version": "2024-11-11" },
+    );
+    return readQrString({ id: json.payment_request_id ?? json.id, actions: json.actions });
+  } catch (error) {
+    lastErrors.push(error instanceof Error ? error.message : "Payments v3 QRIS failed");
+  }
+
+  try {
+    const json = await xenditFetch<{ id: string; qr_string?: string; qr_code?: string }>("/qr_codes", {
+      external_id: params.externalId,
+      type: "DYNAMIC",
+      callback_url: `${process.env.NEXTAUTH_URL ?? "http://localhost:3000"}/api/webhooks/xendit`,
+      amount,
+    });
+    return readQrString(json);
+  } catch (error) {
+    lastErrors.push(error instanceof Error ? error.message : "Legacy QR API failed");
+  }
+
+  throw new Error(lastErrors.filter(Boolean).join(" | ") || "Xendit QRIS failed");
 }
 
 export async function createXenditEWallet(params: {

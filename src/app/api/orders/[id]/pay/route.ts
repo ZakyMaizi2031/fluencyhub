@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
+import QRCode from "qrcode";
 import { getOrderById, updateOrderStatus } from "@/lib/db/orders.queries";
 import { createPaymentLog } from "@/lib/db/payment-logs.queries";
 import { getPaymentMethodById } from "@/lib/db/payment-methods.queries";
 import { getUserById } from "@/lib/db/users.queries";
-import { createSnapToken } from "@/lib/payment/midtrans";
+import { chargeMidtransCore, createSnapToken } from "@/lib/payment/midtrans";
 import {
   createXenditEWallet,
   createXenditQRIS,
@@ -14,6 +15,13 @@ import { auth } from "@/lib/session";
 
 function appBaseUrl() {
   return process.env.NEXTAUTH_URL ?? process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3000";
+}
+
+async function makeQrImage(value: string) {
+  if (value.startsWith("http://") || value.startsWith("https://") || value.startsWith("data:")) {
+    return value;
+  }
+  return QRCode.toDataURL(value, { width: 280, margin: 2, errorCorrectionLevel: "M" });
 }
 
 export async function POST(_req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -41,6 +49,31 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
     phone: user.whatsappNumber ?? "081000000000",
   };
 
+  if (order.status === "awaiting_payment") {
+    const storedQr = order.gatewayPaymentUrl;
+    if (storedQr && (method.type === "qr_code" || method.code.includes("QRIS") || storedQr.startsWith("000201"))) {
+      return NextResponse.json({
+        data: {
+          order,
+          path: "qris",
+          qrString: storedQr,
+          qrImage: await makeQrImage(storedQr),
+        },
+      });
+    }
+    if (order.vaNumber) {
+      return NextResponse.json({ data: { order, path: "va", vaNumber: order.vaNumber } });
+    }
+    if (method.provider === "midtrans" && order.gatewayTransactionId) {
+      return NextResponse.json({
+        data: { order, path: "snap", snapToken: order.gatewayTransactionId },
+      });
+    }
+    if (storedQr?.startsWith("http")) {
+      return NextResponse.json({ data: { order, path: "redirect", checkoutUrl: storedQr } });
+    }
+  }
+
   try {
     if (method.provider === "manual") {
       const updated = await updateOrderStatus(order.id, "awaiting_payment");
@@ -58,6 +91,53 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
       if (!process.env.MIDTRANS_SERVER_KEY) {
         return NextResponse.json({ error: "Midtrans is not configured" }, { status: 400 });
       }
+      const callbackUrl = `${appBaseUrl()}/checkout/success?orderNumber=${order.orderNumber}`;
+      const charged = await chargeMidtransCore({
+        orderNumber: order.orderNumber,
+        grossAmount: amount,
+        methodCode: method.code,
+        customerDetails: customer,
+        callbackUrl,
+      });
+      if (charged.success) {
+        const qrString = charged.qrString ?? null;
+        const qrImage = charged.qrImageUrl
+          ? charged.qrImageUrl
+          : qrString
+            ? await makeQrImage(qrString)
+            : null;
+        const updated = await updateOrderStatus(order.id, "awaiting_payment", {
+          vaNumber: charged.vaNumber ?? null,
+          gatewayTransactionId: charged.transactionId || null,
+          gatewayPaymentUrl: qrString ?? charged.redirectUrl ?? charged.qrImageUrl ?? null,
+        });
+        await createPaymentLog({
+          orderNumber: order.orderNumber,
+          endpoint: "midtrans.core.charge",
+          logType: "payment_request",
+          responsePayload: JSON.stringify({
+            transactionId: charged.transactionId,
+            hasVa: Boolean(charged.vaNumber),
+            hasQr: Boolean(qrImage),
+          }),
+          httpStatus: 200,
+        });
+        if (qrImage) {
+          return NextResponse.json({
+            data: { order: updated, path: "qris", qrString, qrImage },
+          });
+        }
+        if (charged.vaNumber) {
+          return NextResponse.json({
+            data: { order: updated, path: "va", vaNumber: charged.vaNumber },
+          });
+        }
+        if (charged.redirectUrl) {
+          return NextResponse.json({
+            data: { order: updated, path: "redirect", checkoutUrl: charged.redirectUrl },
+          });
+        }
+      }
       const snap = await createSnapToken({
         orderNumber: order.orderNumber,
         grossAmount: amount,
@@ -72,7 +152,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
         orderNumber: order.orderNumber,
         endpoint: "midtrans.snap.createTransaction",
         logType: "payment_request",
-        responsePayload: JSON.stringify({ token: snap.token }),
+        responsePayload: JSON.stringify({ token: snap.token, coreFallback: !charged.success }),
         httpStatus: 200,
       });
       return NextResponse.json({
@@ -114,8 +194,13 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
         });
       }
 
-      if (method.type === "qr_code") {
+      if (method.type === "qr_code" || method.code.includes("QRIS")) {
         const qr = await createXenditQRIS({ externalId: order.orderNumber, amount });
+        const qrImage = await QRCode.toDataURL(qr.qr_string, {
+          width: 280,
+          margin: 2,
+          errorCorrectionLevel: "M",
+        });
         const updated = await updateOrderStatus(order.id, "awaiting_payment", {
           gatewayTransactionId: qr.id,
           gatewayPaymentUrl: qr.qr_string,
@@ -124,11 +209,11 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
           orderNumber: order.orderNumber,
           endpoint: "xendit.qris",
           logType: "payment_request",
-          responsePayload: JSON.stringify(qr),
+          responsePayload: JSON.stringify({ id: qr.id, hasQrString: Boolean(qr.qr_string) }),
           httpStatus: 200,
         });
         return NextResponse.json({
-          data: { order: updated, path: "qris", qrString: qr.qr_string },
+          data: { order: updated, path: "qris", qrString: qr.qr_string, qrImage },
         });
       }
 
