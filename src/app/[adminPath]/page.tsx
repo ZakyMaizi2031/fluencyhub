@@ -64,7 +64,7 @@ export default async function AdminOverviewPage() {
                   <tr key={o.id}>
                     <td style={{ fontWeight: 700, fontSize: 12, color: "var(--brand)" }}>{o.orderNumber}</td>
                     <td style={{ fontSize: 13 }}>{o.buyerName}</td>
-                    <td style={{ fontSize: 12, color: "var(--text-3)" }}>{o.paymentMethod ?? "Unknown"}</td>
+                    <td style={{ fontSize: 12, color: "var(--text-3)" }}>{o.methodName ?? "Unknown"}</td>
                     <td style={{ fontWeight: 700, fontSize: 13 }}>{formatIdr(o.totalAmount)}</td>
                     <td>
                       <span className={`badge ${badgeClass(o.status)}`}>{o.status}</span>
