@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { LandingIcon } from "@/components/landing/LandingIcon";
+import { ProfileDropdown } from "@/components/auth/ProfileDropdown";
 import { auth } from "@/lib/session";
 
 export async function PublicNavbar() {
@@ -24,9 +25,7 @@ export async function PublicNavbar() {
         </div>
         <div className="flex shrink-0 items-center gap-2">
           {session?.user ? (
-            <Link href="/dashboard" className="btn btn-primary btn-default">
-              Dashboard
-            </Link>
+            <ProfileDropdown user={session.user} profileUrl="/profile" />
           ) : (
             <>
               <Link href="/auth/signin" className="btn btn-secondary btn-default hidden md:inline-flex">

@@ -1,5 +1,5 @@
 import { cache } from "react";
-import { getServerSession } from "next-auth";
+import { getServerSession } from "next-auth/next";
 import { getAuthOptions, getAuthSecret } from "@/lib/auth";
 
 export const auth = cache(async () => {

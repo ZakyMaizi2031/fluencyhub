@@ -8,6 +8,8 @@ import { instructorScopeId } from "@/lib/instructor-scope";
 import { auth } from "@/lib/session";
 import { formatIdr } from "@/lib/utils/cn";
 
+import { AdminIcon } from "@/components/admin/AdminIcon";
+
 export default async function InstructorHomePage() {
   const session = await auth();
   const scope = instructorScopeId(session?.user.role, Number(session?.user.id ?? 0));
@@ -19,16 +21,18 @@ export default async function InstructorHomePage() {
   const share = Number(stats.sharePct).toFixed(0);
 
   return (
-    <div className="mx-auto flex max-w-[900px] flex-col gap-4">
+    <div className="anim mx-auto flex max-w-[900px] flex-col gap-4">
       <div className="grid-4" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))" }}>
         {[
-          { lbl: `Revenue (${share}%)`, val: formatIdr(stats.instructorRevenue), bg: "#f0fdf4" },
-          { lbl: "Total Enrolled", val: String(stats.enrolledTotal), bg: "#eff6ff" },
-          { lbl: "Active Courses", val: String(stats.publishedCount), bg: "#f5f3ff" },
-          { lbl: "Revenue Share", val: `${share}%`, bg: "#fefce8" },
+          { lbl: `Revenue (${share}%)`, val: formatIdr(stats.instructorRevenue), bg: "#f0fdf4", c: "var(--green)", icon: "DollarSign" },
+          { lbl: "Total Enrolled", val: String(stats.enrolledTotal), bg: "#eff6ff", c: "var(--blue)", icon: "Users" },
+          { lbl: "Active Courses", val: String(stats.publishedCount), bg: "#f5f3ff", c: "#7c3aed", icon: "BookOpen" },
+          { lbl: "Revenue Share", val: `${share}%`, bg: "#fefce8", c: "var(--yellow)", icon: "TrendingUp" },
         ].map((s) => (
           <div key={s.lbl} className="stat-card">
-            <div className="stat-icon" style={{ background: s.bg }} />
+            <div className="stat-icon" style={{ background: s.bg }}>
+              <AdminIcon name={s.icon} color={s.c} />
+            </div>
             <div>
               <p className="stat-val">{s.val}</p>
               <p className="stat-lbl">{s.lbl}</p>

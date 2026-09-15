@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
 import { auth } from "@/lib/session";
 
-export default async function MemberSignInPage({
+export default async function MemberSignUpPage({
   searchParams,
 }: {
   searchParams: Promise<{ callbackUrl?: string }>;
@@ -31,32 +31,32 @@ export default async function MemberSignInPage({
               Fluency<span className="text-[var(--brand)]">Hub</span>
             </span>
           </Link>
-          <p className="mb-2 text-xs font-bold uppercase tracking-[0.08em] text-[var(--brand)]">Member access</p>
-          <h1 className="heading-lg mb-3">Masuk ke kelas dan kelanjutkan belajar.</h1>
+          <p className="mb-2 text-xs font-bold uppercase tracking-[0.08em] text-[var(--brand)]">Pendaftaran Member</p>
+          <h1 className="heading-lg mb-3">Mulai perjalanan belajarmu sekarang.</h1>
           <p className="text-[var(--text-3)]">
-            Satu akun Google untuk checkout, akses video, dan dashboard progres Anda.
+            Buat akun FluencyHub untuk membeli kelas dan mengakses materi belajar seumur hidup.
           </p>
           <ul className="mt-6 space-y-2 text-sm text-[var(--text-2)]">
-            <li>· Akses seumur hidup setelah pembayaran</li>
-            <li>· Live class Zoom / Google Meet</li>
-            <li>· Pembayaran QRIS, VA, dan e-wallet</li>
+            <li>· Proses daftar 1 detik dengan Google</li>
+            <li>· Tanpa perlu mengingat password baru</li>
+            <li>· Aman dan terenkripsi</li>
           </ul>
         </div>
 
         <div className="w-full max-w-md rounded-3xl border border-white bg-white/90 p-7 shadow-[0_20px_50px_rgba(26,86,219,0.08)] backdrop-blur">
-          <h2 className="mb-1 font-[family-name:var(--font-heading)] text-xl font-extrabold">Log in Member</h2>
-          <p className="mb-6 text-sm text-[var(--text-3)]">Gunakan akun Google yang sama saat membeli kelas.</p>
-          <GoogleSignInButton callbackUrl={callbackUrl} label="Masuk dengan Google" variant="member" />
+          <h2 className="mb-1 font-[family-name:var(--font-heading)] text-xl font-extrabold">Buat Akun Baru</h2>
+          <p className="mb-6 text-sm text-[var(--text-3)]">Daftar menggunakan akun Google Anda.</p>
+          <GoogleSignInButton callbackUrl={callbackUrl} label="Daftar dengan Google" variant="member" />
           
           <div className="mt-6 flex items-center justify-center gap-1 text-sm text-[var(--text-3)]">
-            <span>Belum punya akun?</span>
-            <Link href={`/auth/signup${params.callbackUrl ? `?callbackUrl=${encodeURIComponent(params.callbackUrl)}` : ""}`} className="font-semibold text-[var(--brand)] hover:underline">
-              Daftar di sini
+            <span>Sudah punya akun?</span>
+            <Link href={`/auth/signin${params.callbackUrl ? `?callbackUrl=${encodeURIComponent(params.callbackUrl)}` : ""}`} className="font-semibold text-[var(--brand)] hover:underline">
+              Masuk di sini
             </Link>
           </div>
-
+          
           <p className="mt-5 text-center text-xs text-[var(--text-4)]">
-            Dengan masuk, Anda menyetujui penggunaan akun untuk akses kursus FluencyHub.
+            Dengan mendaftar, Anda menyetujui syarat & ketentuan FluencyHub.
           </p>
         </div>
       </div>

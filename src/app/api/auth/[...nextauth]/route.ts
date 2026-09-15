@@ -1,10 +1,6 @@
 import NextAuth from "next-auth";
-import { getAuthOptions } from "@/lib/auth";
+import { authOptions } from "@/lib/auth";
 
-// Recreate options on every request so Vercel runtime env is used, not a build-time empty secret.
-function handler(...args: [Request, unknown]) {
-  const nextAuthHandler = NextAuth(getAuthOptions()) as (...handlerArgs: unknown[]) => Response;
-  return nextAuthHandler(...args);
-}
+const handler = NextAuth(authOptions);
 
 export { handler as GET, handler as POST };
