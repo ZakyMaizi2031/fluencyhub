@@ -25,7 +25,7 @@ export function CheckoutStepper({
   midtransClientKey,
   midtransSnapScriptUrl,
 }: Props) {
-  const [step, setStep] = useState(user ? 3 : 1);
+  const [step, setStep] = useState(1);
   const [methodId, setMethodId] = useState<number | null>(null);
   const [name, setName] = useState(user?.name ?? "");
   const [email, setEmail] = useState(user?.email ?? "");
@@ -217,103 +217,155 @@ export function CheckoutStepper({
   }
 
   return (
-    <div>
-      <div className="sticky top-0 z-40 mb-6 flex items-center gap-3 border-b border-[var(--border)] bg-white px-4 py-3">
-        <a href="/" className="btn btn-secondary btn-sm">Kembali</a>
-        <div className="flex flex-1 items-center justify-center gap-2">
+    <div className="min-h-screen bg-[var(--bg)] pb-10">
+      <div className="sticky top-0 z-40 flex items-center gap-3 border-b border-[var(--border)] bg-[var(--surface)] px-5 py-3 shadow-sm">
+        {step > 1 && step < 5 ? (
+          <button onClick={() => setStep(step - 1)} className="btn btn-secondary btn-sm flex items-center gap-2">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+            Kembali
+          </button>
+        ) : (
+          <a href="/#harga" className="btn btn-secondary btn-sm flex items-center gap-2">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+            Kembali
+          </a>
+        )}
+        <div className="flex flex-1 items-center justify-center gap-2 md:gap-3">
           {STEPS.map((s, i) => (
-            <div key={s} className="flex items-center gap-2">
-              <div
-                className="flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold"
-                style={{
-                  background: step >= i + 1 ? "var(--brand)" : "var(--surface-2)",
-                  color: step >= i + 1 ? "#fff" : "var(--text-4)",
-                }}
-              >
-                {i + 1}
+            <div key={s} className="flex items-center gap-2 md:gap-3">
+              <div className="flex items-center gap-2">
+                <div
+                  className="flex h-6 w-6 md:h-7 md:w-7 shrink-0 items-center justify-center rounded-full text-[10px] md:text-xs font-bold transition-colors"
+                  style={{
+                    background: step >= i + 1 ? "var(--brand)" : "var(--surface-2)",
+                    color: step >= i + 1 ? "#fff" : "var(--text-4)",
+                  }}
+                >
+                  {step > i + 1 ? <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg> : i + 1}
+                </div>
+                <span className="hidden text-xs font-semibold md:inline font-body" style={{ color: step === i + 1 ? 'var(--brand)' : 'var(--text-4)' }}>{s}</span>
               </div>
-              <span className="hidden text-xs font-semibold md:inline">{s}</span>
+              {i < 3 && <div className="h-[2px] w-3 md:w-7 shrink-0 rounded-[1px] transition-colors" style={{ background: step > i + 1 ? 'var(--brand)' : 'var(--border)' }} />}
             </div>
           ))}
         </div>
+        <div className="w-[60px] md:w-[90px]" />
       </div>
 
-      <div className="mx-auto grid max-w-[860px] gap-4 px-4 md:grid-cols-[1fr_280px]">
+      <div className="mx-auto grid max-w-[860px] gap-4 px-4 py-6 md:grid-cols-[1fr_280px]">
         <div>
-          {error ? <p className="mb-3 rounded-md bg-[#fef2f2] p-3 text-sm text-[var(--red)]">{error}</p> : null}
+          {error ? <p className="mb-3 rounded-md bg-[#fef2f2] p-3 text-sm font-semibold text-[var(--red)] border border-[var(--red-border)]">{error}</p> : null}
 
           {step === 1 && (
-            <div className="card">
-              <h2 className="mb-4 text-xl font-extrabold">Konfirmasi Kelas</h2>
-              <p className="mb-2 font-bold">{course.title}</p>
-              <p className="mb-4 text-sm text-[var(--text-3)]">{course.shortDescription}</p>
+            <div className="card anim">
+              <h2 className="mb-4 text-[20px] font-extrabold font-heading text-[var(--text)]">Konfirmasi Kelas</h2>
+              <div className="mb-5 flex gap-3 rounded-[var(--r-md)] border border-[var(--border)] bg-[var(--surface-2)] p-3.5">
+                {course.thumbnailUrl ? (
+                  <img src={course.thumbnailUrl} className="h-14 w-[84px] shrink-0 rounded-[var(--r)] object-cover" />
+                ) : (
+                  <div className="h-14 w-[84px] shrink-0 rounded-[var(--r)] bg-zinc-200" />
+                )}
+                <div>
+                  <p className="mb-1 text-[13px] font-bold font-heading">{course.title}</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    <span className="badge badge-primary"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect width="15" height="14" x="1" y="5" rx="2" ry="2"/></svg> Live Class</span>
+                    <span className="badge badge-success"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 12c-2-2.67-4-4-6-4a4 4 0 1 0 0 8c2 0 4-1.33 6-4Zm0 0c2 2.67 4 4 6 4a4 4 0 1 0 0-8c-2 0-4 1.33-6 4Z"/></svg> Seumur Hidup</span>
+                  </div>
+                </div>
+              </div>
               <label className="label">Kode Kupon (opsional)</label>
-              <div className="mb-4 flex gap-2">
-                <input className="input" value={coupon} onChange={(e) => setCoupon(e.target.value)} placeholder="STEMFLUENT" />
+              <div className="mb-5 flex gap-2">
+                <input className="input flex-1" value={coupon} onChange={(e) => setCoupon(e.target.value)} placeholder="STEMFLUENT atau WELCOME2026" />
                 <button type="button" className="btn btn-secondary btn-default" onClick={applyCoupon}>
                   Apply
                 </button>
               </div>
-              <button type="button" className="btn btn-primary btn-full btn-default" onClick={() => setStep(2)}>
-                Lanjutkan
+              <button type="button" className="btn btn-primary btn-full btn-default mt-1" onClick={() => setStep(2)}>
+                Lanjutkan <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
               </button>
             </div>
           )}
 
           {step === 2 && (
-            <div className="card">
-              <h2 className="mb-2 text-xl font-extrabold">Data Diri</h2>
-              <p className="mb-4 text-sm text-[var(--text-3)]">Login Google atau isi data.</p>
+            <div className="card anim">
+              <h2 className="mb-1.5 text-[20px] font-extrabold font-heading text-[var(--text)]">Data Diri</h2>
+              <p className="mb-4 text-[13px] text-[var(--text-3)]">Isi manual atau login dengan Google untuk auto-fill.</p>
+              
               <button
                 type="button"
-                className="btn btn-secondary btn-full btn-default mb-4"
-                onClick={() =>
-                  signIn("google", { callbackUrl: `/checkout?courseId=${course.id}` })
-                }
+                className="mb-4 flex w-full items-center justify-center gap-2.5 rounded-[var(--r)] border border-[var(--border)] bg-[var(--surface)] p-2.5 text-[14px] font-semibold shadow-[var(--shadow-sm)] hover:bg-[var(--surface-2)] transition-colors"
+                onClick={() => signIn("google", { callbackUrl: `/checkout?courseId=${course.id}` })}
               >
+                <svg width="18" height="18" viewBox="0 0 24 24">
+                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                </svg>
                 Lanjutkan dengan Google
               </button>
-              <label className="label">Nama</label>
-              <input className="input mb-3" value={name} onChange={(e) => setName(e.target.value)} />
-              <label className="label">Email</label>
-              <input className="input mb-3" value={email} onChange={(e) => setEmail(e.target.value)} />
-              <label className="label">WhatsApp</label>
-              <input className="input mb-4" value={wa} onChange={(e) => setWa(e.target.value)} />
-              <p className="mb-3 text-xs text-[var(--text-4)]">
-                Untuk membuat order, Anda harus login Google. Form ini mengisi profil setelah login.
-              </p>
+
+              <div className="mb-4 flex items-center gap-3 text-[12px] text-[var(--text-4)]">
+                <div className="h-px flex-1 bg-[var(--border)]" /> atau isi manual <div className="h-px flex-1 bg-[var(--border)]" />
+              </div>
+
+              <div className="mb-3.5">
+                <label className="label">Nama Lengkap</label>
+                <input className="input" value={name} onChange={(e) => setName(e.target.value)} placeholder="Budi Santoso" />
+              </div>
+              <div className="mb-3.5">
+                <label className="label">Email</label>
+                <input className="input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="budi@gmail.com" />
+              </div>
+              <div className="mb-3.5">
+                <label className="label">Nomor WhatsApp</label>
+                <input className="input" type="tel" value={wa} onChange={(e) => setWa(e.target.value)} placeholder="0812xxxx" />
+              </div>
+              
               <button
                 type="button"
-                className="btn btn-primary btn-full btn-default"
+                className="btn btn-primary btn-full btn-default mt-1"
                 onClick={() => {
+                  if (!name || !email || !wa) {
+                    setError("Semua field wajib diisi");
+                    return;
+                  }
                   if (!user) {
                     signIn("google", { callbackUrl: `/checkout?courseId=${course.id}` });
                     return;
                   }
+                  setError("");
                   setStep(3);
                 }}
               >
-                Lanjutkan
+                Lanjutkan <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
               </button>
             </div>
           )}
 
           {step === 3 && (
-            <div className="card">
-              <h2 className="mb-4 text-xl font-extrabold">Pilih Metode Pembayaran</h2>
+            <div className="card anim">
+              <h2 className="mb-1 text-[20px] font-extrabold font-heading text-[var(--text)]">Pilih Metode Pembayaran</h2>
+              <p className="mb-5 text-[13px] text-[var(--text-3)]">Semua transaksi diproses secara aman dan terenkripsi.</p>
+              
               {Object.entries(grouped).map(([provider, list]) => (
-                <div key={provider} className="mb-4">
-                  <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-[var(--text-4)]">
-                    {provider}
-                  </p>
-                  <div className="flex flex-col gap-2">
+                <div key={provider} className="mb-4.5">
+                  <div className="mb-2 flex items-center gap-2">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-4)]">
+                      {provider === 'midtrans' ? 'Midtrans' : provider === 'xendit' ? 'Xendit' : 'Bank Transfer'}
+                    </p>
+                    <span className={`badge ${provider === 'midtrans' ? 'badge-primary' : provider === 'xendit' ? 'badge-success' : 'badge-warning'}`}>
+                      {provider}
+                    </span>
+                  </div>
+                  <div className="flex flex-col gap-1.5">
                     {list.map((m) => (
                       <label
                         key={m.id}
-                        className="flex cursor-pointer items-center gap-3 rounded-[var(--r)] border px-3 py-3"
+                        className="flex cursor-pointer items-center gap-3 rounded-[var(--r)] border-[1.5px] px-3.5 py-2.5 transition-all"
                         style={{
                           borderColor: methodId === m.id ? "var(--brand)" : "var(--border)",
-                          background: methodId === m.id ? "var(--brand-50)" : "white",
+                          background: methodId === m.id ? "var(--brand-50)" : "var(--surface)",
                         }}
                       >
                         <input
@@ -321,74 +373,104 @@ export function CheckoutStepper({
                           name="pm"
                           checked={methodId === m.id}
                           onChange={() => setMethodId(m.id)}
+                          className="h-4 w-4 shrink-0 accent-[var(--brand)]"
                         />
                         <PaymentMethodLogo src={m.logoUrl} name={m.name} code={m.code} />
-                        <span className="font-semibold">{m.name}</span>
+                        <span className="flex-1 text-[14px] font-semibold" style={{ color: methodId === m.id ? 'var(--brand)' : 'var(--text)' }}>
+                          {m.name}
+                        </span>
                       </label>
                     ))}
                   </div>
                 </div>
               ))}
-              <button type="button" className="btn btn-primary btn-full btn-default" onClick={() => setStep(4)}>
-                Lanjutkan
+              <button type="button" className="btn btn-primary btn-full btn-default mt-1" onClick={() => { if(!methodId) { setError("Pilih metode pembayaran"); return; } setError(""); setStep(4); }}>
+                Lanjutkan <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
               </button>
             </div>
           )}
 
           {step === 4 && (
-            <div className="card">
-              <h2 className="mb-4 text-xl font-extrabold">Review & Bayar</h2>
-              <div className="mb-4 rounded-[var(--r-md)] bg-[var(--surface-2)] p-4">
-                <div className="flex justify-between text-sm">
-                  <span>Harga kelas</span>
+            <div className="card anim">
+              <h2 className="mb-4 text-[20px] font-extrabold font-heading text-[var(--text)]">Review & Bayar</h2>
+              
+              <div className="mb-4 rounded-[var(--r-md)] border border-[var(--border)] bg-[var(--surface-2)] p-4">
+                <div className="mb-1.5 flex justify-between text-[14px]">
+                  <span className="text-[var(--text-3)]">Harga kelas</span>
                   <span className="font-semibold">{formatIdr(base)}</span>
                 </div>
-                {discount > 0 ? (
-                  <div className="flex justify-between text-sm text-[var(--green)]">
-                    <span>Diskon</span>
+                {discount > 0 && (
+                  <div className="mb-1.5 flex justify-between text-[14px] text-[var(--green)]">
+                    <span>Diskon kupon</span>
                     <span>-{formatIdr(discount)}</span>
                   </div>
-                ) : null}
-                <div className="mt-3 flex justify-between text-lg font-extrabold">
+                )}
+                <div className="my-2.5 h-px bg-[var(--border)]" />
+                <div className="flex justify-between font-heading text-[18px] font-extrabold">
                   <span>Total</span>
                   <span className="text-[var(--brand)]">{formatIdr(total)}</span>
                 </div>
               </div>
-              <div className="mb-4 flex items-center gap-3">
+
+              <div className="mb-4 flex items-center gap-3 rounded-[var(--r)] border border-[var(--border)] bg-[var(--surface)] px-3.5 py-3">
                 {method ? <PaymentMethodLogo src={method.logoUrl} name={method.name} code={method.code} /> : null}
-                <p className="text-sm font-semibold">{method?.name ?? "—"}</p>
+                <div className="flex flex-col">
+                  <span className="text-[14px] font-semibold text-[var(--text)]">{method?.name || '—'}</span>
+                  <span className="text-[11px] font-bold text-[var(--text-4)] uppercase tracking-wider">{method?.provider || '—'}</span>
+                </div>
               </div>
+
+              {(method?.type === 'manual_transfer' || method?.provider === 'manual') && (
+                <div className="mb-4 rounded-[var(--r)] border border-[var(--yellow-border)] bg-[var(--yellow-bg)] px-3.5 py-2.5 text-[13px] text-[var(--yellow)]">
+                  <strong>{method.name}</strong> a.n. PT FluencyHub Edukasi Indonesia — upload bukti di langkah berikutnya.
+                </div>
+              )}
+
               <button type="button" className="btn btn-primary btn-full btn-lg" disabled={busy} onClick={pay}>
-                {busy ? "Memproses..." : "Bayar Sekarang"}
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                <span className="ml-2">{busy ? "Memproses..." : "Bayar Sekarang"}</span>
               </button>
+              <p className="mt-2.5 text-center text-[11px] text-[var(--text-4)]">Diproses oleh Midtrans & Xendit. SSL terenkripsi.</p>
             </div>
           )}
 
           {step === 5 && (
-            <div className="card">
-              <div className="mb-3 flex items-center gap-3">
-                {method ? <PaymentMethodLogo src={method.logoUrl} name={method.name} code={method.code} /> : null}
-                <h2 className="text-xl font-extrabold">Upload Bukti Transfer</h2>
-              </div>
-              {instructions.map((ins) => (
-                <div key={ins.id} className="mb-4 text-sm text-[var(--text-2)]">
-                  <p className="mb-2 font-semibold">{ins.title}</p>
-                  <div className="instruction-html" dangerouslySetInnerHTML={{ __html: ins.content }} />
+            <div className="card anim">
+              <div className="mb-6 text-center pt-2">
+                <div className="mx-auto mb-4 flex justify-center">
+                  {method ? <PaymentMethodLogo src={method.logoUrl} name={method.name} code={method.code} /> : null}
                 </div>
-              ))}
-              <input
-                type="file"
-                accept="image/jpeg,image/png,application/pdf"
-                className="mb-4"
-                onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-              />
+                <h2 className="mb-2 text-[20px] font-extrabold font-heading text-[var(--text)]">Upload Bukti Transfer</h2>
+                <p className="text-[14px] leading-relaxed text-[var(--text-3)]">
+                  Transfer ke <strong>{method?.name}</strong> a.n. PT FluencyHub Edukasi, lalu upload foto/PDF bukti bayar.
+                </p>
+              </div>
+
+              <div className="mb-4.5 rounded-[var(--r-lg)] border-2 border-dashed border-[var(--border-2)] bg-[var(--surface-2)] px-5 py-8 text-center transition-colors hover:border-[var(--brand)] hover:bg-[var(--brand-50)] cursor-pointer relative">
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,application/pdf"
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+                />
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mx-auto mb-2.5 text-[var(--text-4)]"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+                {file ? (
+                  <p className="mb-1 text-[14px] font-semibold text-[var(--brand)]">{file.name}</p>
+                ) : (
+                  <>
+                    <p className="mb-1 text-[14px] font-semibold text-[var(--text-2)]">Klik atau drag file ke sini</p>
+                    <p className="text-[12px] text-[var(--text-4)]">JPG, PNG, PDF — maks 5MB</p>
+                  </>
+                )}
+              </div>
+
               <button type="button" className="btn btn-primary btn-full btn-lg" disabled={busy} onClick={uploadProof}>
                 {busy ? "Mengunggah..." : "Upload & Kirim"}
               </button>
             </div>
           )}
 
-          {step === 6 && (
+          {step === 6 && !orderNumber && (
             <VAInstructions
               vaNumber={vaNumber}
               qrImage={qrImage}
@@ -400,22 +482,63 @@ export function CheckoutStepper({
               title={qrImage || qrString ? "Scan QRIS" : "Transfer / payment code"}
             />
           )}
+
           {step === 6 && orderNumber ? (
-            <a
-              href={`/checkout/success?orderNumber=${orderNumber}`}
-              className="btn btn-secondary btn-full btn-default mt-3"
-            >
-              I have paid — check status
-            </a>
+            <div className="card anim text-center py-10 px-5">
+              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full border border-[var(--yellow-border)] bg-[var(--yellow-bg)] text-[var(--accent)]">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              </div>
+              <h2 className="mb-2 text-[22px] font-extrabold font-heading text-[var(--brand)]">Menunggu Verifikasi!</h2>
+              <p className="mb-6 text-[14px] leading-relaxed text-[var(--text-3)]">
+                Silakan selesaikan pembayaran sesuai instruksi. Transaksi Anda (Order #{orderNumber}) akan diverifikasi secara otomatis.
+              </p>
+              <a
+                href={`/checkout/success?orderNumber=${orderNumber}`}
+                className="btn btn-primary btn-lg"
+              >
+                Cek Status Pembayaran <svg className="ml-2" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+              </a>
+            </div>
           ) : null}
         </div>
 
-        <aside className="card h-fit">
-          <p className="mb-3 font-bold">Ringkasan Order</p>
-          <p className="text-sm font-semibold">{course.title}</p>
-          <p className="mt-4 text-lg font-extrabold text-[var(--brand)]">{formatIdr(total)}</p>
+        <aside className="h-fit lg:sticky lg:top-[80px]">
+          <div className="card">
+            <p className="mb-3.5 font-heading text-[14px] font-bold text-[var(--text)]">Ringkasan Order</p>
+            {course.thumbnailUrl ? (
+              <img src={course.thumbnailUrl} className="mb-3 h-[110px] w-full rounded-[var(--r-md)] object-cover" />
+            ) : (
+              <div className="mb-3 h-[110px] w-full rounded-[var(--r-md)] bg-zinc-200" />
+            )}
+            <p className="mb-1 font-heading text-[13px] font-bold leading-tight">{course.title}</p>
+            <p className="mb-3.5 text-[11px] text-[var(--text-4)]">Akses Seumur Hidup · Sertifikat</p>
+            
+            <div className="flex flex-col gap-1.5 border-t border-[var(--border)] pt-3">
+              <div className="flex justify-between text-[13px]">
+                <span className="text-[var(--text-3)]">Harga</span>
+                <span className="font-semibold">{formatIdr(base)}</span>
+              </div>
+              {discount > 0 && (
+                <div className="flex justify-between text-[13px] text-[var(--green)]">
+                  <span>Diskon Kupon</span>
+                  <span>-{formatIdr(discount)}</span>
+                </div>
+              )}
+              <div className="mt-1 flex justify-between border-t border-[var(--border)] pt-2.5 font-heading text-[16px] font-extrabold">
+                <span>Total</span>
+                <span className="text-[var(--brand)]">{formatIdr(total)}</span>
+              </div>
+            </div>
+
+            <div className="mt-3.5 rounded-[var(--r)] border border-[var(--green-border)] bg-[var(--green-bg)] px-3 py-2.5">
+              {['✓ Email & WhatsApp', '✓ Live Class Zoom/GMeet', '✓ Certificate of Completion'].map(t => (
+                <p key={t} className="mb-0.5 text-[11px] font-semibold text-[var(--green)]">{t}</p>
+              ))}
+            </div>
+          </div>
         </aside>
       </div>
+
       {snapToken ? (
         <SnapModal
           token={snapToken}

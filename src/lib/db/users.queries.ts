@@ -45,6 +45,9 @@ export async function createUser(data: {
       ${data.role ?? "user"},
       ${data.whatsappNumber ?? null}
     )
+    ON CONFLICT (email) DO UPDATE SET 
+      google_id = COALESCE(users.google_id, EXCLUDED.google_id),
+      name = COALESCE(users.name, EXCLUDED.name)
     RETURNING *
   `;
   return mapUser(rows[0] as Record<string, unknown>);

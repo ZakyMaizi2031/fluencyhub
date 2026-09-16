@@ -7,12 +7,16 @@ import { useState, useRef, useEffect } from "react";
 export function ProfileDropdown({
   user,
   profileUrl = "/dashboard/profile",
+  hasDashboardAccess = false,
 }: {
   user: { name?: string | null; image?: string | null; role?: string | null };
   profileUrl?: string;
+  hasDashboardAccess?: boolean;
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  console.log("ProfileDropdown rendered with hasDashboardAccess:", hasDashboardAccess, "for user:", user.name, "role:", user.role);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -45,13 +49,15 @@ export function ProfileDropdown({
             <p className="truncate text-sm font-medium text-zinc-900">{user.name}</p>
           </div>
           <div className="py-1">
-            <Link
-              href="/dashboard"
-              onClick={() => setIsOpen(false)}
-              className="block px-4 py-2 text-sm text-zinc-700 hover:bg-zinc-50"
-            >
-              Dashboard
-            </Link>
+            {hasDashboardAccess && (
+              <Link
+                href="/dashboard"
+                onClick={() => setIsOpen(false)}
+                className="block px-4 py-2 text-sm text-zinc-700 hover:bg-zinc-50"
+              >
+                Dashboard
+              </Link>
+            )}
             <Link
               href={profileUrl}
               onClick={() => setIsOpen(false)}

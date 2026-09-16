@@ -5,6 +5,7 @@ import { getCourseById } from "@/lib/db/courses.queries";
 import { getActivePaymentMethods } from "@/lib/db/payment-methods.queries";
 import { midtransClientKey, midtransSnapScriptUrl } from "@/lib/payment/midtrans-public";
 import { auth } from "@/lib/session";
+import { getUserById } from "@/lib/db/users.queries";
 
 export default async function CheckoutPage({
   searchParams,
@@ -31,6 +32,11 @@ export default async function CheckoutPage({
     if (enrolled) redirect(`/dashboard/courses/${courseId}`);
   }
 
+  let dbUser = null;
+  if (session?.user?.id) {
+    dbUser = await getUserById(Number(session.user.id));
+  }
+
   return (
     <CheckoutStepper
       course={course}
@@ -40,7 +46,7 @@ export default async function CheckoutPage({
           ? {
               name: session.user.name ?? "",
               email: session.user.email ?? "",
-              whatsappNumber: null,
+              whatsappNumber: dbUser?.whatsappNumber ?? null,
             }
           : null
       }

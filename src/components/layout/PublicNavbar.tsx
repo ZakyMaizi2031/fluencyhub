@@ -2,9 +2,22 @@ import Link from "next/link";
 import { LandingIcon } from "@/components/landing/LandingIcon";
 import { ProfileDropdown } from "@/components/auth/ProfileDropdown";
 import { auth } from "@/lib/session";
+import { listEnrollmentsForUser } from "@/lib/db/enrollments.queries";
+
+export const dynamic = "force-dynamic";
 
 export async function PublicNavbar() {
   const session = await auth();
+
+  let hasDashboardAccess = false;
+  if (session?.user) {
+    if (session.user.role === "admin" || session.user.role === "instructor") {
+      hasDashboardAccess = true;
+    } else {
+      const enrollments = await listEnrollmentsForUser(Number(session.user.id));
+      hasDashboardAccess = enrollments.length > 0;
+    }
+  }
 
   return (
     <nav className="glass-nav sticky top-0 z-50">
@@ -25,7 +38,7 @@ export async function PublicNavbar() {
         </div>
         <div className="flex shrink-0 items-center gap-2">
           {session?.user ? (
-            <ProfileDropdown user={session.user} profileUrl="/profile" />
+            <ProfileDropdown user={session.user} profileUrl="/profile" hasDashboardAccess={hasDashboardAccess} />
           ) : (
             <>
               <Link href="/auth/signin" className="btn btn-secondary btn-default hidden md:inline-flex">

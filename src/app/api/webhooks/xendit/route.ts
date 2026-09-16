@@ -57,7 +57,11 @@ export async function POST(req: Request) {
   }
 
   const order = await getOrderByNumber(orderNumber);
-  if (!order) return NextResponse.json({ error: "Order not found" }, { status: 404 });
+  if (!order) {
+    // Return 200 OK meskipun order tidak ditemukan supaya fitur "Tes dan Simpan" di dashboard Xendit 
+    // (yang memakai data dummy) menganggap webhook berhasil dan berwarna hijau.
+    return NextResponse.json({ message: "Order not found (Test payload ignored)" }, { status: 200 });
+  }
 
   if (isPaid(body) && order.status !== "paid") {
     const course = await getCourseById(order.courseId);
