@@ -195,7 +195,7 @@ export function CoursePlayer({
                 >
                   {l.isCompleted ? (
                     <div className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-[var(--green-bg)] text-[var(--green)]">
-                      <Icon name="Check" size={12} strokeWidth={3} />
+                      <Icon name="Check" size={12} />
                     </div>
                   ) : (
                     <span className="player-radio" />

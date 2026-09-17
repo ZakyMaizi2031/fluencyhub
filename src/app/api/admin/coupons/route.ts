@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { createCouponAdmin } from "@/lib/db/coupons.queries";
-import { getSession } from "@/lib/auth/session";
+import { auth } from "@/lib/session";
 
 export async function POST(req: Request) {
   try {
-    const session = await getSession();
+    const session = await auth();
     if (session?.user?.role !== "admin") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }

@@ -18,7 +18,7 @@ export default async function CheckoutSuccessPage({
 
   if (order.status === "pending" || order.status === "awaiting_payment") {
     if (order.paymentMethodId) {
-      const method = await import("@/lib/db/payment-methods.queries").then(m => m.getPaymentMethodById(order.paymentMethodId));
+      const method = await import("@/lib/db/payment-methods.queries").then(m => m.getPaymentMethodById(order.paymentMethodId!));
       if (method?.type === "manual_transfer") {
         redirect(`/checkout?courseId=${order.courseId}`);
       }

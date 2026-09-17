@@ -47,7 +47,7 @@ export default async function VideosPage({
   }
 
   const course = selectedEnrollment.course;
-  const curriculum = await listCoursePlayerCurriculum(course.id);
+  const curriculum = await listCoursePlayerCurriculum(course.id, userId);
 
   return (
     <main className="min-h-[calc(100vh-72px)] w-full p-6 pb-20 md:p-8">

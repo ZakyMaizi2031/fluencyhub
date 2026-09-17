@@ -1,15 +1,16 @@
 import { NextResponse } from "next/server";
 import { updateCouponAdmin, toggleCouponActiveAdmin } from "@/lib/db/coupons.queries";
-import { getSession } from "@/lib/auth/session";
+import { auth } from "@/lib/session";
 
-export async function PATCH(req: Request, { params }: { params: { id: string } }) {
+export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const session = await getSession();
+    const session = await auth();
     if (session?.user?.role !== "admin") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const id = Number(params.id);
+    const { id: paramId } = await params;
+    const id = Number(paramId);
     if (isNaN(id)) return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
 
     const body = await req.json();
