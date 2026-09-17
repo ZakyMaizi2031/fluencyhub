@@ -1,4 +1,9 @@
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { LandingIcon as Icon } from "@/components/landing/LandingIcon";
 import type { PlayerLesson, PlayerSection } from "@/lib/db/lessons.queries";
 
 function typeLabel(type: string) {
@@ -29,9 +34,41 @@ export function CoursePlayer({
   liveJoinUrl: string | null;
   backHref: string;
 }) {
+  const router = useRouter();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showNotesAlert, setShowNotesAlert] = useState(false);
+
   const total = sections.reduce((n, s) => n + s.lessons.length, 0);
+  const completedCount = sections.reduce(
+    (n, s) => n + s.lessons.filter((l) => l.isCompleted).length,
+    0
+  );
   const index = sections.flatMap((s) => s.lessons).findIndex((l) => l.id === current.id);
   const pct = total ? Math.round(((index + 1) / total) * 100) : 0;
+  const progressPct = total ? Math.round((completedCount / total) * 100) : 0;
+
+  async function handleToggleComplete() {
+    if (preview || isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      const res = await fetch("/api/dashboard/progress", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          courseId,
+          lessonId: current.id,
+          isCompleted: !current.isCompleted,
+        }),
+      });
+      if (!res.ok) throw new Error("Failed to update progress");
+      router.refresh();
+    } catch (err) {
+      console.error(err);
+      alert("Terjadi kesalahan. Silakan coba lagi.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
 
   return (
     <div className="player-shell">
@@ -41,8 +78,8 @@ export function CoursePlayer({
           {preview ? <span className="badge badge-inst">Preview mode</span> : null}
         </div>
         <div className="flex items-center gap-3">
-          <span className="text-xs font-semibold text-[var(--text-3)]">
-            {index + 1}/{total} · {pct}%
+          <span className="text-xs font-semibold text-[var(--text-3)]" title="Progress Belajar">
+            Progress: {progressPct}%
           </span>
           <Link href={backHref} className="btn btn-ghost btn-sm" aria-label="Close">
             ✕
@@ -52,6 +89,15 @@ export function CoursePlayer({
       <div className="player-grid">
         <div className="player-main">
           <p className="mb-3 font-[family-name:var(--font-heading)] text-lg font-extrabold">{current.title}</p>
+          
+          <div className="mb-4 flex flex-wrap gap-2">
+            <span className="badge badge-primary">Lesson {index + 1}</span>
+            {current.durationMinutes ? (
+              <span className="badge badge-default">{current.durationMinutes} min</span>
+            ) : null}
+            {current.isFreePreview ? <span className="badge badge-warning">Free Preview</span> : null}
+          </div>
+
           {current.contentType === "youtube_video" && current.youtubeVideoId ? (
             <iframe
               className="aspect-video w-full rounded-[var(--r-lg)] bg-black"
@@ -86,7 +132,38 @@ export function CoursePlayer({
             <div className="card whitespace-pre-wrap text-sm">{current.textContent}</div>
           ) : null}
           {current.description ? <p className="mt-4 text-sm text-[var(--text-2)]">{current.description}</p> : null}
-          <div className="player-nav">
+          
+          <div className="mt-6 flex flex-wrap gap-2">
+            {!preview && (
+              <button
+                disabled={isSubmitting}
+                onClick={handleToggleComplete}
+                className={`btn ${current.isCompleted ? "btn-secondary" : "btn-success"} btn-default`}
+              >
+                {current.isCompleted ? (
+                  "Batal Tandai Selesai"
+                ) : (
+                  <>
+                    <Icon name="CheckCircle" size={16} /> Tandai Selesai
+                  </>
+                )}
+              </button>
+            )}
+            <button
+              onClick={() => setShowNotesAlert(true)}
+              className="btn btn-secondary btn-default"
+            >
+              <Icon name="StickyNote" size={16} /> Catatan
+            </button>
+          </div>
+          
+          {showNotesAlert && (
+            <div className="mt-2 text-sm text-[var(--yellow)]">
+              ⚠️ Fitur catatan akan segera hadir di pembaruan selanjutnya!
+            </div>
+          )}
+
+          <div className="player-nav mt-8">
             {prevId ? (
               <Link href={`/dashboard/courses/${courseId}/${prevId}`} className="btn btn-secondary btn-default">
                 ← Pelajaran sebelumnya
@@ -116,7 +193,13 @@ export function CoursePlayer({
                   href={`/dashboard/courses/${courseId}/${l.id}`}
                   className={`player-item${l.id === current.id ? " active" : ""}`}
                 >
-                  <span className="player-radio" />
+                  {l.isCompleted ? (
+                    <div className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-[var(--green-bg)] text-[var(--green)]">
+                      <Icon name="Check" size={12} strokeWidth={3} />
+                    </div>
+                  ) : (
+                    <span className="player-radio" />
+                  )}
                   <span className="min-w-0">
                     <span className="block truncate text-[13px] font-semibold">{l.title}</span>
                     <span className="text-[10px] text-[var(--text-4)]">

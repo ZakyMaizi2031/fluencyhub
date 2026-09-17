@@ -110,6 +110,8 @@ export function mapPaymentMethod(row: Row): PaymentMethod {
     provider: row.provider as PaymentMethod["provider"],
     adminFeeFlat: asNum(row.admin_fee_flat),
     adminFeePct: String(row.admin_fee_pct),
+    accountNumber: (row.account_number as string) ?? null,
+    accountName: (row.account_name as string) ?? null,
     isActive: Boolean(row.is_active),
     isRedirect: Boolean(row.is_redirect),
     sortOrder: asNum(row.sort_order),

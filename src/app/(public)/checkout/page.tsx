@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { CheckoutStepper } from "@/components/checkout/CheckoutStepper";
 import { checkEnrollment } from "@/lib/db/enrollments.queries";
 import { getCourseById } from "@/lib/db/courses.queries";
+import { getActiveOrderForUserCourse } from "@/lib/db/orders.queries";
 import { getActivePaymentMethods } from "@/lib/db/payment-methods.queries";
 import { midtransClientKey, midtransSnapScriptUrl } from "@/lib/payment/midtrans-public";
 import { auth } from "@/lib/session";
@@ -33,8 +34,10 @@ export default async function CheckoutPage({
   }
 
   let dbUser = null;
+  let existingOrder = null;
   if (session?.user?.id) {
     dbUser = await getUserById(Number(session.user.id));
+    existingOrder = await getActiveOrderForUserCourse(Number(session.user.id), courseId);
   }
 
   return (
@@ -52,6 +55,7 @@ export default async function CheckoutPage({
       }
       midtransClientKey={midtransClientKey()}
       midtransSnapScriptUrl={midtransSnapScriptUrl()}
+      initialOrder={existingOrder}
     />
   );
 }

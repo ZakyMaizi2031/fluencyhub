@@ -1,4 +1,5 @@
 import { InstructorBottomNav, InstructorSidebar } from "@/components/instructor/InstructorSidebar";
+import { TopbarSignOut } from "@/components/layout/TopbarSignOut";
 import { auth } from "@/lib/session";
 
 export default async function InstructorLayout({ children }: { children: React.ReactNode }) {
@@ -18,12 +19,15 @@ export default async function InstructorLayout({ children }: { children: React.R
           <span className="badge badge-inst" style={{ fontSize: 10 }}>
             Instructor Mode
           </span>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={session?.user.image || "https://i.pravatar.cc/80?img=15"}
-            alt=""
-            className="avatar avatar-ring-i h-8 w-8"
-          />
+          <div className="flex items-center gap-3">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={session?.user.image || "https://i.pravatar.cc/80?img=15"}
+              alt=""
+              className="avatar avatar-ring-i h-8 w-8"
+            />
+            <TopbarSignOut />
+          </div>
         </div>
         <div className="dash-content">{children}</div>
         <InstructorBottomNav />

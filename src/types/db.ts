@@ -115,6 +115,8 @@ export interface PaymentMethod {
   provider: PaymentProvider;
   adminFeeFlat: number;
   adminFeePct: string;
+  accountNumber: string | null;
+  accountName: string | null;
   isActive: boolean;
   isRedirect: boolean;
   sortOrder: number;

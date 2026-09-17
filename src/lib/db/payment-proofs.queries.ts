@@ -9,6 +9,11 @@ export async function createPaymentProof(data: {
   fileSizeBytes?: number | null;
   mimeType?: string | null;
 }): Promise<PaymentProof> {
+  await sql`
+    UPDATE payment_proofs SET status = 'rejected', rejection_note = 'Diganti oleh pengguna'
+    WHERE order_id = ${data.orderId} AND status = 'pending'
+  `;
+
   const rows = await sql`
     INSERT INTO payment_proofs (order_id, file_url, file_name, file_size_bytes, mime_type)
     VALUES (

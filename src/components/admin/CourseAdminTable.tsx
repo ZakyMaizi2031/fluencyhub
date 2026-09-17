@@ -72,6 +72,16 @@ export function CourseAdminTable({
   const [values, setValues] = useState<Draft>(empty);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const filteredCourses = courses.filter((c) => {
+    const q = searchQuery.toLowerCase();
+    return (
+      c.title.toLowerCase().includes(q) ||
+      c.slug.toLowerCase().includes(q) ||
+      c.instructorName.toLowerCase().includes(q)
+    );
+  });
 
   function startCreate() {
     setEditId(null);
@@ -142,15 +152,40 @@ export function CourseAdminTable({
 
   return (
     <div>
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-extrabold">Courses</h1>
-        <button type="button" className="btn btn-primary btn-sm" onClick={startCreate}>
-          Add course
-        </button>
+        <div className="flex items-center gap-3">
+          <div className="relative">
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-4)]"
+            >
+              <circle cx="11" cy="11" r="8" />
+              <path d="m21 21-4.3-4.3" />
+            </svg>
+            <input
+              type="text"
+              placeholder="Cari kelas..."
+              className="input !pl-9 text-sm py-1.5"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+          <button type="button" className="btn btn-primary btn-sm shrink-0" onClick={startCreate}>
+            Add course
+          </button>
+        </div>
       </div>
-      <AdminDataGrid columns={["Title", "Instructor", "Price", "Status", "Featured", "Publish", "Actions"]} rowCount={courses.length}>
+      <AdminDataGrid columns={["Title", "Instructor", "Price", "Status", "Featured", "Publish", "Actions"]} rowCount={filteredCourses.length}>
         {({ start, end }) =>
-          courses.slice(start, end).map((c, i) => (
+          filteredCourses.slice(start, end).map((c, i) => (
             <tr key={c.id}>
               <td className="text-[var(--text-3)]">{start + i + 1}</td>
               <td>

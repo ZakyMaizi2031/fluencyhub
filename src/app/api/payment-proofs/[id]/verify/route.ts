@@ -26,7 +26,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
   if (parsed.data.action === "reject") {
     await updatePaymentProofStatus(proof.id, "rejected", Number(session.user.id), parsed.data.note);
-    await updateOrderStatus(order.id, "failed", { notes: parsed.data.note ?? null });
+    await updateOrderStatus(order.id, "pending", { notes: parsed.data.note ?? null });
     return NextResponse.json({ data: { status: "rejected" } });
   }
 

@@ -16,6 +16,7 @@ type UserRow = {
   isActive: boolean;
   revenueSharePct: string;
   createdAt: string;
+  deletedAt: string | null;
 };
 
 type Draft = {
@@ -45,6 +46,16 @@ export function UserAdminTable({ users, currentUserId }: { users: UserRow[]; cur
   const [values, setValues] = useState<Draft>(empty);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const filteredUsers = users.filter((u) => {
+    const q = searchQuery.toLowerCase();
+    return (
+      u.name.toLowerCase().includes(q) ||
+      u.email.toLowerCase().includes(q) ||
+      (u.whatsappNumber && u.whatsappNumber.includes(q))
+    );
+  });
 
   function startCreate() {
     setEditId(null);
@@ -112,20 +123,58 @@ export function UserAdminTable({ users, currentUserId }: { users: UserRow[]; cur
     router.refresh();
   }
 
+  async function restore(u: UserRow) {
+    if (!confirm(`Restore ${u.name}? This will make the user visible again.`)) return;
+    setBusy(true);
+    const res = await fetch(`/api/admin/users/${u.id}/restore`, { method: "POST" });
+    setBusy(false);
+    if (!res.ok) {
+      const json = (await res.json().catch(() => ({}))) as { error?: string };
+      alert(typeof json.error === "string" ? json.error : "Restore failed");
+      return;
+    }
+    router.refresh();
+  }
+
   return (
     <div>
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-extrabold">Users</h1>
-        <button type="button" className="btn btn-primary btn-sm" onClick={startCreate}>
-          Add user
-        </button>
+        <div className="flex items-center gap-3">
+          <div className="relative">
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-4)]"
+            >
+              <circle cx="11" cy="11" r="8" />
+              <path d="m21 21-4.3-4.3" />
+            </svg>
+            <input
+              type="text"
+              placeholder="Cari user..."
+              className="input !pl-9 text-sm py-1.5"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+          <button type="button" className="btn btn-primary btn-sm shrink-0" onClick={startCreate}>
+            Add user
+          </button>
+        </div>
       </div>
       <AdminDataGrid
         columns={["Name", "Email", "WhatsApp", "Role", "Enrolled", "Share %", "Status", "Joined", "Actions"]}
-        rowCount={users.length}
+        rowCount={filteredUsers.length}
       >
         {({ start, end }) =>
-          users.slice(start, end).map((u, i) => (
+          filteredUsers.slice(start, end).map((u, i) => (
             <tr key={u.id}>
               <td className="text-[var(--text-3)]">{start + i + 1}</td>
               <td className="font-semibold">{u.name}</td>
@@ -137,19 +186,27 @@ export function UserAdminTable({ users, currentUserId }: { users: UserRow[]; cur
               <td>{u.enrolledCount}</td>
               <td>{u.revenueSharePct}</td>
               <td>
-                <span className={u.isActive ? "badge badge-success" : "badge badge-warning"}>
-                  {u.isActive ? "active" : "inactive"}
+                <span className={u.deletedAt ? "badge badge-danger" : u.isActive ? "badge badge-success" : "badge badge-warning"}>
+                  {u.deletedAt ? "deleted" : u.isActive ? "active" : "inactive"}
                 </span>
               </td>
               <td>{new Date(u.createdAt).toLocaleDateString("id-ID")}</td>
               <td>
                 <div className="flex gap-2">
-                  <button type="button" className="btn btn-secondary btn-sm" disabled={busy} onClick={() => startEdit(u)}>
-                    Edit
-                  </button>
-                  <button type="button" className="btn btn-secondary btn-sm" disabled={busy} onClick={() => remove(u)}>
-                    Delete
-                  </button>
+                  {!u.deletedAt && (
+                    <button type="button" className="btn btn-secondary btn-sm" disabled={busy} onClick={() => startEdit(u)}>
+                      Edit
+                    </button>
+                  )}
+                  {u.deletedAt ? (
+                    <button type="button" className="btn btn-secondary btn-sm" disabled={busy} onClick={() => restore(u)}>
+                      Restore
+                    </button>
+                  ) : (
+                    <button type="button" className="btn btn-secondary btn-sm" disabled={busy} onClick={() => remove(u)}>
+                      Delete
+                    </button>
+                  )}
                 </div>
               </td>
             </tr>

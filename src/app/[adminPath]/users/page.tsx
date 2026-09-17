@@ -18,6 +18,7 @@ export default async function AdminUsersPage() {
         isActive: u.isActive,
         revenueSharePct: u.revenueSharePct,
         createdAt: new Date(u.createdAt).toISOString(),
+        deletedAt: u.deletedAt ? new Date(u.deletedAt).toISOString() : null,
       }))}
     />
   );

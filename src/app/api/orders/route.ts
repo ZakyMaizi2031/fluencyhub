@@ -47,8 +47,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Already enrolled" }, { status: 409 });
   }
   if (existing) {
-    if (existing.status === "paid" || existing.status === "pending_verification") {
-      return NextResponse.json({ error: "You already have an order for this course" }, { status: 409 });
+    if (existing.status === "paid") {
+      return NextResponse.json({ error: "You already have a paid order for this course" }, { status: 409 });
     }
     if (existing.paymentMethodId === paymentMethodId) {
       return NextResponse.json({ data: existing }, { status: 200 });

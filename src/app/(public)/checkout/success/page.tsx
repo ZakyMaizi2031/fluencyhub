@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { OrderStatusPoller } from "@/components/checkout/OrderStatusPoller";
 import { getCourseById } from "@/lib/db/courses.queries";
 import { getOrderByNumber } from "@/lib/db/orders.queries";
@@ -15,6 +15,15 @@ export default async function CheckoutSuccessPage({
   const order = await getOrderByNumber(orderNumber);
   if (!order) notFound();
   const course = await getCourseById(order.courseId);
+
+  if (order.status === "pending" || order.status === "awaiting_payment") {
+    if (order.paymentMethodId) {
+      const method = await import("@/lib/db/payment-methods.queries").then(m => m.getPaymentMethodById(order.paymentMethodId));
+      if (method?.type === "manual_transfer") {
+        redirect(`/checkout?courseId=${order.courseId}`);
+      }
+    }
+  }
 
   return (
     <main className="mx-auto max-w-lg px-4 py-16">
@@ -40,9 +49,16 @@ export default async function CheckoutSuccessPage({
               ? "Tim akan verifikasi bukti transfer. Setelah disetujui, kelas terbuka di dashboard."
               : "Selesaikan pembayaran di Snap / VA / e-wallet. Halaman ini akan terbarui setelah webhook terkonfirmasi."}
         </p>
-        <Link href="/dashboard" className="btn btn-primary btn-lg">
-          Ke Dashboard
-        </Link>
+        <div className="flex flex-col gap-3">
+          <Link href="/dashboard" className="btn btn-primary btn-lg">
+            Ke Dashboard
+          </Link>
+          {order.status === "pending_verification" && (
+            <Link href={`/checkout?courseId=${order.courseId}`} className="btn btn-secondary btn-lg">
+              Unggah Ulang Bukti
+            </Link>
+          )}
+        </div>
       </div>
     </main>
   );

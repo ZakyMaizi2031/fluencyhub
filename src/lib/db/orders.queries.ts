@@ -166,9 +166,9 @@ export async function listOrdersForAdmin(limit = 50): Promise<AdminOrderRow[]> {
   });
 }
 
-export async function listOrdersWithDetailsForUser(userId: number): Promise<(Order & { courseTitle: string; methodName: string | null })[]> {
+export async function listOrdersWithDetailsForUser(userId: number): Promise<(Order & { courseTitle: string; methodName: string | null; methodType: string | null })[]> {
   const rows = await sql`
-    SELECT o.*, c.title AS course_title, pm.name AS method_name
+    SELECT o.*, c.title AS course_title, pm.name AS method_name, pm.type AS method_type
     FROM orders o
     JOIN courses c ON c.id = o.course_id
     LEFT JOIN payment_methods pm ON pm.id = o.payment_method_id
@@ -181,6 +181,7 @@ export async function listOrdersWithDetailsForUser(userId: number): Promise<(Ord
       ...mapOrder(row),
       courseTitle: String(row.course_title ?? ""),
       methodName: row.method_name == null ? null : String(row.method_name),
+      methodType: row.method_type == null ? null : String(row.method_type),
     };
   });
 }

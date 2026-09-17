@@ -17,37 +17,57 @@ export type PlayerLesson = {
   description: string | null;
   durationMinutes: number;
   isFreePreview: boolean;
+  isCompleted: boolean;
 };
 
 export type PlayerSection = { id: number; title: string; lessons: PlayerLesson[] };
 
-export async function listCoursePlayerCurriculum(courseId: number): Promise<PlayerSection[]> {
+export async function listCoursePlayerCurriculum(courseId: number, userId: number | null): Promise<PlayerSection[]> {
   const tree = await listInstructorCurriculum(courseId);
-  return tree.map((s) => ({
-    id: s.id,
-    title: s.title,
-    lessons: s.lessons.map((l) => ({
-      id: l.id,
-      sectionId: l.sectionId,
-      title: l.title,
-      contentType: l.contentType,
-      youtubeVideoId: l.youtubeVideoId,
-      liveClassUrl: l.liveClassUrl,
-      liveClassDatetime: l.liveClassDatetime,
-      documentUrl: l.documentUrl,
-      textContent: l.textContent,
-      description: l.description,
-      durationMinutes: l.durationMinutes ?? 0,
-      isFreePreview: l.isFreePreview,
-    })),
-  }));
+  
+  let progressMap = new Map<number, boolean>();
+  if (userId) {
+    const rows = await sql`
+      SELECT lp.lesson_id, lp.is_completed
+      FROM lesson_progress lp
+      JOIN enrollments e ON e.id = lp.enrollment_id
+      WHERE lp.user_id = ${userId} AND e.course_id = ${courseId}
+    `;
+    for (const r of rows) {
+      progressMap.set(Number(r.lesson_id), Boolean(r.is_completed));
+    }
+  }
+
+  return tree
+    .map((s) => ({
+      id: s.id,
+      title: s.title,
+      lessons: s.lessons
+        .filter((l) => l.contentType !== "live_class")
+        .map((l) => ({
+          id: l.id,
+          sectionId: l.sectionId,
+          title: l.title,
+          contentType: l.contentType,
+          youtubeVideoId: l.youtubeVideoId,
+          liveClassUrl: l.liveClassUrl,
+          liveClassDatetime: l.liveClassDatetime,
+          documentUrl: l.documentUrl,
+          textContent: l.textContent,
+          description: l.description,
+          durationMinutes: l.durationMinutes ?? 0,
+          isFreePreview: l.isFreePreview,
+          isCompleted: progressMap.get(l.id) ?? false,
+        })),
+    }))
+    .filter((s) => s.lessons.length > 0);
 }
 
 export async function getFirstLessonIdForCourse(courseId: number): Promise<number | null> {
   const rows = await sql`
     SELECT l.id FROM lessons l
     JOIN sections s ON s.id = l.section_id
-    WHERE s.course_id = ${courseId} AND l.deleted_at IS NULL
+    WHERE s.course_id = ${courseId} AND l.deleted_at IS NULL AND l.content_type != 'live_class'
     ORDER BY s.sort_order ASC, l.sort_order ASC, l.id ASC
     LIMIT 1
   `;
@@ -184,3 +204,48 @@ export async function getLessonById(id: number): Promise<Lesson | null> {
   `;
   return rows[0] ? mapLesson(rows[0] as Record<string, unknown>) : null;
 }
+
+export type UpcomingLiveClass = {
+  id: number;
+  title: string;
+  liveClassDatetime: Date | null;
+  liveClassUrl: string | null;
+  moduleName: string;
+  coachName: string;
+  coachAvatar: string;
+};
+
+export async function listUpcomingLiveClasses(userId: number): Promise<UpcomingLiveClass[]> {
+  const rows = await sql`
+    SELECT
+      l.id,
+      l.title,
+      l.live_class_datetime,
+      l.live_class_url,
+      s.title as module_name,
+      u.name as coach_name,
+      u.avatar_url as coach_avatar
+    FROM lessons l
+    JOIN sections s ON s.id = l.section_id
+    JOIN courses c ON c.id = s.course_id
+    JOIN users u ON u.id = c.instructor_id
+    JOIN enrollments e ON e.course_id = c.id
+    WHERE l.content_type = 'live_class'
+      AND l.deleted_at IS NULL
+      AND e.user_id = ${userId}
+    ORDER BY l.live_class_datetime ASC
+  `;
+  return rows.map((r) => {
+    const raw = r as Record<string, unknown>;
+    return {
+      id: Number(raw.id),
+      title: String(raw.title),
+      liveClassDatetime: raw.live_class_datetime ? new Date(String(raw.live_class_datetime)) : null,
+      liveClassUrl: raw.live_class_url ? String(raw.live_class_url) : null,
+      moduleName: String(raw.module_name),
+      coachName: String(raw.coach_name),
+      coachAvatar: raw.coach_avatar ? String(raw.coach_avatar) : "https://i.pravatar.cc/150?u=" + String(raw.coach_name),
+    };
+  });
+}
+

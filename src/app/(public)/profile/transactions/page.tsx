@@ -97,7 +97,10 @@ export default async function TransactionsPage() {
 
                 {isPending && (
                   <div className="flex flex-col gap-2 sm:pl-4 sm:border-l border-zinc-100 justify-center">
-                    <Link href={`/checkout/success?orderNumber=${o.orderNumber}`} className="btn btn-primary w-full sm:w-auto text-sm py-2 px-6">
+                    <Link 
+                      href={o.methodType === 'manual_transfer' ? `/checkout?courseId=${o.courseId}` : `/checkout/success?orderNumber=${o.orderNumber}`} 
+                      className="btn btn-primary w-full sm:w-auto text-sm py-2 px-6"
+                    >
                       Selesaikan Pembayaran
                     </Link>
                     <CancelButton orderId={o.id} />

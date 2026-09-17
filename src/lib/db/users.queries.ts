@@ -134,12 +134,19 @@ export async function deleteUserAdmin(id: number): Promise<void> {
   `;
 }
 
+export async function restoreUserAdmin(id: number): Promise<void> {
+  await sql`
+    UPDATE users
+    SET deleted_at = NULL, is_active = TRUE, updated_at = NOW()
+    WHERE id = ${id} AND deleted_at IS NOT NULL
+  `;
+}
+
 export async function listUsersAdmin(): Promise<AdminUserRow[]> {
   const rows = await sql`
     SELECT u.*,
       (SELECT COUNT(*) FROM enrollments e WHERE e.user_id = u.id) AS enrolled_count
     FROM users u
-    WHERE u.deleted_at IS NULL
     ORDER BY u.created_at DESC
   `;
   return rows.map((r) => {

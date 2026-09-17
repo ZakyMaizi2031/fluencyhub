@@ -14,6 +14,7 @@ type Props = {
   user: { name: string; email: string; whatsappNumber: string | null } | null;
   midtransClientKey: string;
   midtransSnapScriptUrl: string;
+  initialOrder?: any;
 };
 
 const STEPS = ["Kelas", "Data Diri", "Bayar", "Konfirmasi"];
@@ -24,18 +25,19 @@ export function CheckoutStepper({
   user,
   midtransClientKey,
   midtransSnapScriptUrl,
+  initialOrder,
 }: Props) {
-  const [step, setStep] = useState(1);
-  const [methodId, setMethodId] = useState<number | null>(null);
+  const [step, setStep] = useState(initialOrder ? 4 : 1);
+  const [methodId, setMethodId] = useState<number | null>(initialOrder?.paymentMethodId ?? null);
   const [name, setName] = useState(user?.name ?? "");
   const [email, setEmail] = useState(user?.email ?? "");
   const [wa, setWa] = useState(user?.whatsappNumber ?? "");
-  const [coupon, setCoupon] = useState("");
-  const [discount, setDiscount] = useState(0);
+  const [coupon, setCoupon] = useState(initialOrder?.couponCode ?? "");
+  const [discount, setDiscount] = useState(initialOrder ? Number(initialOrder.discountAmount) : 0);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
-  const [orderNumber, setOrderNumber] = useState<string | null>(null);
-  const [orderId, setOrderId] = useState<number | null>(null);
+  const [orderNumber, setOrderNumber] = useState<string | null>(initialOrder?.orderNumber ?? null);
+  const [orderId, setOrderId] = useState<number | null>(initialOrder?.id ?? null);
   const [file, setFile] = useState<File | null>(null);
   const [snapToken, setSnapToken] = useState<string | null>(null);
   const [vaNumber, setVaNumber] = useState<string | null>(null);
@@ -96,6 +98,11 @@ export function CheckoutStepper({
       setError("Pilih metode pembayaran");
       return;
     }
+    if ((method.type === 'manual_transfer' || method.provider === 'manual') && !file) {
+      setError("Pilih foto bukti transfer terlebih dahulu sebelum membayar");
+      return;
+    }
+    
     setBusy(true);
     setError("");
     setQrImage(null);
@@ -131,7 +138,28 @@ export function CheckoutStepper({
 
       const path = paid.data?.path as string | undefined;
       if (path === "manual" || method.type === "manual_transfer") {
-        setStep(5);
+        // Lakukan upload file
+        const form = new FormData();
+        form.set("file", file!);
+        form.set("folder", "proofs");
+        const up = await fetch("/api/upload", { method: "POST", body: form });
+        const uploaded = await up.json();
+        if (!up.ok) throw new Error(uploaded.error ?? "Upload gagal");
+  
+        const proof = await fetch("/api/payment-proofs", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            orderId: id,
+            fileUrl: uploaded.data.url,
+            fileSizeBytes: file!.size,
+            mimeType: file!.type,
+            fileName: file!.name,
+          }),
+        });
+        const proved = await proof.json();
+        if (!proof.ok) throw new Error(proved.error ?? "Gagal menyimpan bukti transfer");
+        window.location.href = `/checkout/success?orderNumber=${created.data.orderNumber}`;
         return;
       }
       if (path === "snap" && paid.data?.snapToken) {
@@ -179,42 +207,6 @@ export function CheckoutStepper({
     },
     [orderNumber],
   );
-
-  async function uploadProof() {
-    if (!file || !orderId) {
-      setError("Pilih file bukti transfer");
-      return;
-    }
-    setBusy(true);
-    setError("");
-    try {
-      const form = new FormData();
-      form.set("file", file);
-      form.set("folder", "proofs");
-      const up = await fetch("/api/upload", { method: "POST", body: form });
-      const uploaded = await up.json();
-      if (!up.ok) throw new Error(uploaded.error ?? "Upload failed");
-
-      const proof = await fetch("/api/payment-proofs", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          orderId,
-          fileUrl: uploaded.data.url,
-          fileName: file.name,
-          fileSizeBytes: file.size,
-          mimeType: file.type,
-        }),
-      });
-      const json = await proof.json();
-      if (!proof.ok) throw new Error(json.error ?? "Proof save failed");
-      window.location.href = `/checkout/success?orderNumber=${orderNumber}`;
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Upload failed");
-    } finally {
-      setBusy(false);
-    }
-  }
 
   return (
     <div className="min-h-screen bg-[var(--bg)] pb-10">
@@ -421,52 +413,75 @@ export function CheckoutStepper({
               </div>
 
               {(method?.type === 'manual_transfer' || method?.provider === 'manual') && (
-                <div className="mb-4 rounded-[var(--r)] border border-[var(--yellow-border)] bg-[var(--yellow-bg)] px-3.5 py-2.5 text-[13px] text-[var(--yellow)]">
-                  <strong>{method.name}</strong> a.n. PT FluencyHub Edukasi Indonesia — upload bukti di langkah berikutnya.
+                <div className="mb-4 rounded-[var(--r-lg)] border border-[var(--border)] p-5 text-left bg-[var(--surface-2)]">
+                  <div className="mb-4">
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-4)] mb-1">
+                      {method?.name} (TRANSFER MANUAL)
+                    </p>
+                    <p className="font-semibold text-[15px]">{method?.accountName || "PT FluencyHub Edukasi"}</p>
+                  </div>
+                  
+                  <div className="rounded-md bg-[var(--surface)] p-4 text-center mb-5 border border-[var(--border)]">
+                    <p className="font-mono text-[24px] font-bold tracking-[0.2em] text-[var(--text)]">
+                      {method?.accountNumber || "-"}
+                    </p>
+                  </div>
+                  
+                  <div className="flex gap-3 mb-6">
+                    <button 
+                      onClick={() => {
+                        navigator.clipboard.writeText(method?.accountNumber || "");
+                        alert("Nomor rekening berhasil disalin!");
+                      }}
+                      className="btn btn-outline btn-full text-[13px] bg-[var(--bg)]"
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+                      Salin Rekening
+                    </button>
+                    <button 
+                      onClick={() => {
+                        navigator.clipboard.writeText(total.toString());
+                        alert("Nominal berhasil disalin!");
+                      }}
+                      className="btn btn-outline btn-full text-[13px] bg-[var(--bg)]"
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+                      Salin Nominal
+                    </button>
+                  </div>
+                  
+                  <div className="h-px bg-[var(--border)] mb-5" />
+                  
+                  <div className="mb-2">
+                    <h3 className="font-bold text-[14px] mb-1">Bukti Transfer</h3>
+                    <p className="text-[12px] text-[var(--text-3)] mb-3">Silakan unggah foto/PDF bukti transfer di bawah ini:</p>
+                    
+                    <div className="rounded-[var(--r-md)] border-2 border-dashed border-[var(--border-2)] bg-[var(--surface)] px-4 py-6 text-center transition-colors hover:border-[var(--brand)] hover:bg-[var(--brand-50)] cursor-pointer relative">
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,application/pdf"
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                        onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+                      />
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mx-auto mb-2.5 text-[var(--text-4)]"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+                      {file ? (
+                        <p className="mb-1 text-[13px] font-semibold text-[var(--brand)]">{file.name}</p>
+                      ) : (
+                        <>
+                          <p className="mb-1 text-[13px] font-semibold text-[var(--text-2)]">Pilih foto/PDF bukti bayar</p>
+                          <p className="text-[11px] text-[var(--text-4)]">Maks 5MB</p>
+                        </>
+                      )}
+                    </div>
+                  </div>
                 </div>
               )}
 
               <button type="button" className="btn btn-primary btn-full btn-lg" disabled={busy} onClick={pay}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                <span className="ml-2">{busy ? "Memproses..." : "Bayar Sekarang"}</span>
+                <span className="ml-2">{busy ? "Memproses..." : "Cek Status Pembayaran"}</span>
               </button>
               <p className="mt-2.5 text-center text-[11px] text-[var(--text-4)]">Diproses oleh Midtrans & Xendit. SSL terenkripsi.</p>
-            </div>
-          )}
-
-          {step === 5 && (
-            <div className="card anim">
-              <div className="mb-6 text-center pt-2">
-                <div className="mx-auto mb-4 flex justify-center">
-                  {method ? <PaymentMethodLogo src={method.logoUrl} name={method.name} code={method.code} /> : null}
-                </div>
-                <h2 className="mb-2 text-[20px] font-extrabold font-heading text-[var(--text)]">Upload Bukti Transfer</h2>
-                <p className="text-[14px] leading-relaxed text-[var(--text-3)]">
-                  Transfer ke <strong>{method?.name}</strong> a.n. PT FluencyHub Edukasi, lalu upload foto/PDF bukti bayar.
-                </p>
-              </div>
-
-              <div className="mb-4.5 rounded-[var(--r-lg)] border-2 border-dashed border-[var(--border-2)] bg-[var(--surface-2)] px-5 py-8 text-center transition-colors hover:border-[var(--brand)] hover:bg-[var(--brand-50)] cursor-pointer relative">
-                <input
-                  type="file"
-                  accept="image/jpeg,image/png,application/pdf"
-                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                  onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-                />
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mx-auto mb-2.5 text-[var(--text-4)]"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
-                {file ? (
-                  <p className="mb-1 text-[14px] font-semibold text-[var(--brand)]">{file.name}</p>
-                ) : (
-                  <>
-                    <p className="mb-1 text-[14px] font-semibold text-[var(--text-2)]">Klik atau drag file ke sini</p>
-                    <p className="text-[12px] text-[var(--text-4)]">JPG, PNG, PDF — maks 5MB</p>
-                  </>
-                )}
-              </div>
-
-              <button type="button" className="btn btn-primary btn-full btn-lg" disabled={busy} onClick={uploadProof}>
-                {busy ? "Mengunggah..." : "Upload & Kirim"}
-              </button>
             </div>
           )}
 

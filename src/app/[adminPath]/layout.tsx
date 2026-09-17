@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { AdminMobileNav } from "@/components/admin/AdminMobileNav";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
+import { TopbarSignOut } from "@/components/layout/TopbarSignOut";
 import { getAdminPath } from "@/lib/auth";
 import { auth } from "@/lib/session";
 
@@ -31,6 +32,7 @@ export default async function AdminLayout({
         { href: `${base}/payments`, label: "Transaksi" },
         { href: `${base}/payments/verify`, label: "Verify" },
         { href: `${base}/payments/methods`, label: "Methods" },
+        { href: `${base}/coupons`, label: "Coupons" },
       ],
     },
     {
@@ -60,12 +62,15 @@ export default async function AdminLayout({
           <span className="badge badge-danger" style={{ fontSize: 10 }}>
             ADMIN MODE
           </span>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={session?.user.image || "https://i.pravatar.cc/80?img=22"}
-            alt=""
-            className="avatar h-8 w-8"
-          />
+          <div className="flex items-center gap-3">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={session?.user.image || "https://i.pravatar.cc/80?img=22"}
+              alt=""
+              className="avatar h-8 w-8"
+            />
+            <TopbarSignOut />
+          </div>
         </div>
         <div className="dash-content">
           <AdminMobileNav items={flat} />

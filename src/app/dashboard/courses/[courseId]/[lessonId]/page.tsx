@@ -23,7 +23,7 @@ export default async function LessonPage({
   const course = await getCourseById(cid);
   if (!course) notFound();
 
-  const sections = await listCoursePlayerCurriculum(cid);
+  const sections = await listCoursePlayerCurriculum(cid, session ? Number(session.user.id) : null);
   const flat = sections.flatMap((s) => s.lessons);
   const idx = flat.findIndex((l) => l.id === lid);
   if (idx < 0) notFound();

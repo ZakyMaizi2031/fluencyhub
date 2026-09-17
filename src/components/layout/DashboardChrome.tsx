@@ -23,6 +23,7 @@ export function DashboardChrome({
     { id: "live", icon: "Video", label: "Live", href: "/dashboard/live" },
     { id: "studio", icon: "Building2", label: "Studio", href: "/dashboard/studio" },
     { id: "resources", icon: "BookOpen", label: "Resources", href: "/dashboard/resources" },
+    { id: "home", icon: "Home", label: "Halaman Utama", href: "/" },
   ];
 
   return (
@@ -73,16 +74,6 @@ export function DashboardChrome({
           })}
         </nav>
 
-        {/* Bottom Actions */}
-        <div className="mt-auto pt-8">
-          <Link
-            href="/"
-            className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold text-zinc-400 transition hover:bg-zinc-800/50 hover:text-white"
-          >
-            <LandingIcon name="Home" color="currentColor" />
-            Halaman Utama
-          </Link>
-        </div>
       </aside>
 
       {/* Main Content Area */}

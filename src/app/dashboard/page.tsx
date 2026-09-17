@@ -3,6 +3,13 @@ import { listEnrollmentsForUser } from "@/lib/db/enrollments.queries";
 import { listPublishedCoursesWithInstructor } from "@/lib/db/courses.queries";
 import { auth } from "@/lib/session";
 import { LandingIcon } from "@/components/landing/LandingIcon";
+import {
+  getUserDashboardStats,
+  getActiveEnrollment,
+  getUpcomingLiveClass,
+} from "@/lib/db/dashboard.queries";
+import { format } from "date-fns";
+import { id as localeId } from "date-fns/locale";
 
 export default async function DashboardHomePage() {
   const session = await auth();
@@ -11,12 +18,17 @@ export default async function DashboardHomePage() {
     : [];
 
   const allCourses = await listPublishedCoursesWithInstructor();
+  
+  const userId = session?.user.id ? Number(session.user.id) : null;
+  const statsData = userId ? await getUserDashboardStats(userId) : { totalCompletedLessons: 0, totalLessons: 0, totalLiveClasses: 0, totalResources: 0 };
+  const activeEnrollment = userId ? await getActiveEnrollment(userId) : null;
+  const upcomingLive = userId ? await getUpcomingLiveClass(userId) : null;
 
   const stats = [
-    { icon: "CheckCircle", bg: "bg-green-50", c: "#16a34a", lbl: "Lesson Selesai", val: "2/12" },
-    { icon: "Video", bg: "bg-blue-50", c: "#2563eb", lbl: "Sesi Live", val: "1/8" },
+    { icon: "CheckCircle", bg: "bg-green-50", c: "#16a34a", lbl: "Lesson Selesai", val: `${statsData.totalCompletedLessons}/${statsData.totalLessons}` },
+    { icon: "Video", bg: "bg-blue-50", c: "#2563eb", lbl: "Sesi Live", val: `${statsData.totalLiveClasses}` },
     { icon: "Building2", bg: "bg-yellow-50", c: "#d97706", lbl: "Studio Booking", val: "0/1" },
-    { icon: "FileText", bg: "bg-purple-50", c: "#7c3aed", lbl: "Resources", val: "3" },
+    { icon: "FileText", bg: "bg-purple-50", c: "#7c3aed", lbl: "Resources", val: `${statsData.totalResources}` },
   ];
 
   return (
@@ -28,18 +40,26 @@ export default async function DashboardHomePage() {
           <h2 className="mb-1 font-[family-name:var(--font-heading)] text-2xl font-extrabold md:text-3xl">
             Welcome back, {session?.user.name}! 👋
           </h2>
-          <p className="mb-6 text-sm text-white/80">
-            Anda di <strong className="text-yellow-200">Modul 1: Minggu ke-1</strong>. Terus semangat!
-          </p>
-          <div className="inline-block rounded-xl bg-black/20 p-4">
-            <div className="mb-2 flex justify-between text-xs font-semibold text-white/90">
-              <span>Modul 1 Progress</span>
-              <span>25%</span>
-            </div>
-            <div className="h-2 w-48 overflow-hidden rounded-full bg-white/20 md:w-64">
-              <div className="h-full w-1/4 bg-yellow-200" />
-            </div>
-          </div>
+          {activeEnrollment ? (
+            <>
+              <p className="mb-6 text-sm text-white/80">
+                Anda di <strong className="text-yellow-200">{activeEnrollment.course.title}</strong>. Terus semangat!
+              </p>
+              <div className="inline-block rounded-xl bg-black/20 p-4">
+                <div className="mb-2 flex justify-between text-xs font-semibold text-white/90 gap-8">
+                  <span>Progress Belajar</span>
+                  <span>{activeEnrollment.progressPct}%</span>
+                </div>
+                <div className="h-2 w-48 overflow-hidden rounded-full bg-white/20 md:w-64">
+                  <div className="h-full bg-yellow-200" style={{ width: `${activeEnrollment.progressPct}%` }} />
+                </div>
+              </div>
+            </>
+          ) : (
+            <p className="mt-4 text-sm text-white/80">
+              Belum ada kelas aktif. Yuk cari kelas baru!
+            </p>
+          )}
         </div>
       </div>
 
@@ -64,30 +84,46 @@ export default async function DashboardHomePage() {
         <div className="rounded-3xl border border-zinc-100 bg-white p-6 shadow-sm">
           <div className="mb-6 flex items-center justify-between">
             <h3 className="font-[family-name:var(--font-heading)] text-lg font-bold text-zinc-900">Lanjutkan Belajar</h3>
-            <button className="flex items-center gap-1 text-sm font-semibold text-zinc-500 hover:text-[var(--brand)]">
-              Lihat Semua <LandingIcon name="ArrowRight" color="currentColor" />
-            </button>
+            {activeEnrollment && (
+              <Link href={`/dashboard/courses/${activeEnrollment.course.id}`} className="flex items-center gap-1 text-sm font-semibold text-zinc-500 hover:text-[var(--brand)]">
+                Lihat Semua <LandingIcon name="ArrowRight" color="currentColor" />
+              </Link>
+            )}
           </div>
           
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-            <div className="relative h-24 w-40 shrink-0 overflow-hidden rounded-xl group cursor-pointer">
-              <img src="https://images.unsplash.com/photo-1552664730-d307ca884978?w=400&q=70" className="h-full w-full object-cover transition duration-300 group-hover:scale-105" alt="Thumbnail" />
-              <div className="absolute inset-0 flex items-center justify-center bg-black/20 transition group-hover:bg-black/40">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/30 backdrop-blur-md">
-                  <LandingIcon name="Play" color="#fff" />
+          {activeEnrollment && activeEnrollment.nextLesson ? (
+            <Link href={`/dashboard/courses/${activeEnrollment.course.id}/${activeEnrollment.nextLesson.id}`} className="group block">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+                <div className="relative h-24 w-40 shrink-0 overflow-hidden rounded-xl bg-zinc-100">
+                  {activeEnrollment.course.thumbnailUrl ? (
+                    <img src={activeEnrollment.course.thumbnailUrl} className="h-full w-full object-cover transition duration-300 group-hover:scale-105" alt="Thumbnail" />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center">
+                      <LandingIcon name="Play" color="#9ca3af" />
+                    </div>
+                  )}
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/20 transition group-hover:bg-black/40">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/30 backdrop-blur-md">
+                      <LandingIcon name="Play" color="#fff" />
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <span className="mb-2 inline-block rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-blue-600">
+                    {activeEnrollment.nextSection?.title}
+                  </span>
+                  <h4 className="mb-1 font-[family-name:var(--font-heading)] text-base font-bold text-zinc-900 group-hover:text-[var(--brand)] transition-colors">
+                    {activeEnrollment.nextLesson.title}
+                  </h4>
+                  <p className="text-sm text-zinc-500 line-clamp-1">{activeEnrollment.course.title}</p>
                 </div>
               </div>
+            </Link>
+          ) : (
+            <div className="text-sm text-zinc-500">
+              Belum ada materi yang bisa dilanjutkan.
             </div>
-            <div>
-              <span className="mb-2 inline-block rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-blue-600">
-                Modul 1 • Lesson 1
-              </span>
-              <h4 className="mb-1 font-[family-name:var(--font-heading)] text-base font-bold text-zinc-900">
-                The Architecture of a Pitch
-              </h4>
-              <p className="text-sm text-zinc-500">Teknik Rule of Three untuk presentasi C-Level.</p>
-            </div>
-          </div>
+          )}
         </div>
 
         {/* Live Mendatang */}
@@ -99,20 +135,37 @@ export default async function DashboardHomePage() {
             </span>
             <span className="text-xs font-bold uppercase tracking-wider text-blue-600">Live Mendatang</span>
           </div>
-          <div className="mb-4 flex items-center justify-between rounded-xl bg-white p-3 shadow-sm border border-zinc-100">
-            <div className="text-center px-2">
-              <div className="text-sm font-bold text-zinc-900">18</div>
-              <div className="text-xs font-semibold text-zinc-500">AUG</div>
+          
+          {upcomingLive && upcomingLive.datetime ? (
+            <>
+              <div className="mb-4 flex items-center justify-between rounded-xl bg-white p-3 shadow-sm border border-zinc-100">
+                <div className="text-center px-2">
+                  <div className="text-sm font-bold text-zinc-900">
+                    {format(new Date(upcomingLive.datetime), "d")}
+                  </div>
+                  <div className="text-xs font-semibold text-zinc-500 uppercase">
+                    {format(new Date(upcomingLive.datetime), "MMM", { locale: localeId })}
+                  </div>
+                </div>
+                <div className="h-8 w-px bg-zinc-100" />
+                <div className="flex-1 px-3 min-w-0">
+                  <div className="text-xs font-semibold text-blue-600">
+                    {format(new Date(upcomingLive.datetime), "HH:mm")} WIB
+                  </div>
+                  <div className="truncate text-sm font-bold text-zinc-900" title={upcomingLive.title}>
+                    {upcomingLive.title}
+                  </div>
+                </div>
+              </div>
+              <button className="w-full rounded-xl bg-blue-600 py-3 text-sm font-bold text-white transition hover:bg-blue-700">
+                Lihat Detail
+              </button>
+            </>
+          ) : (
+            <div className="flex h-20 items-center justify-center text-sm text-zinc-500">
+              Tidak ada jadwal live terdekat.
             </div>
-            <div className="h-8 w-px bg-zinc-100" />
-            <div className="flex-1 px-3">
-              <div className="text-xs font-semibold text-blue-600">19:00 WIB</div>
-              <div className="truncate text-sm font-bold text-zinc-900">Roleplay: Dashboard Briefing</div>
-            </div>
-          </div>
-          <button className="w-full rounded-xl bg-blue-600 py-3 text-sm font-bold text-white transition hover:bg-blue-700">
-            Gabung Sesi Live
-          </button>
+          )}
         </div>
       </div>
 

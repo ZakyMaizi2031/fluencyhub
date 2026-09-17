@@ -100,6 +100,26 @@ export function LandingIcon({
           <polyline points="12 6 12 12 16 14" />
         </>
       )}
+      {name === "FileCheck" && (
+        <>
+          <path d="M14 2H6a2 2 0 0 0-2 2v16c0 1.1.9 2 2 2h12a2 2 0 0 0 2-2V8l-6-6z" />
+          <path d="M14 3v5h5M9 15l2 2 4-4" />
+        </>
+      )}
+      {name === "Layers" && (
+        <>
+          <polygon points="12 2 2 7 12 12 22 7 12 2" />
+          <polyline points="2 12 12 17 22 12" />
+          <polyline points="2 17 12 22 22 17" />
+        </>
+      )}
+      {name === "Download" && (
+        <>
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+          <polyline points="7 10 12 15 17 10" />
+          <line x1="12" y1="15" x2="12" y2="3" />
+        </>
+      )}
     </svg>
   );
 }
