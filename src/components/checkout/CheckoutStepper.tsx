@@ -485,7 +485,7 @@ export function CheckoutStepper({
             </div>
           )}
 
-          {step === 6 && (vaNumber || qrImage || qrString) ? (
+          {step === 6 && (vaNumber || qrImage || qrString) && (
             <VAInstructions
               vaNumber={vaNumber}
               qrImage={qrImage}
@@ -496,23 +496,22 @@ export function CheckoutStepper({
               logoUrl={method?.logoUrl}
               title={qrImage || qrString ? "Scan QRIS" : "Transfer / payment code"}
             />
-          ) : step === 6 && orderNumber ? (
-            <div className="card anim text-center py-10 px-5">
-              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full border border-[var(--yellow-border)] bg-[var(--yellow-bg)] text-[var(--accent)]">
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-              </div>
-              <h2 className="mb-2 text-[22px] font-extrabold font-heading text-[var(--brand)]">Menunggu Verifikasi!</h2>
-              <p className="mb-6 text-[14px] leading-relaxed text-[var(--text-3)]">
-                Silakan selesaikan pembayaran sesuai instruksi. Transaksi Anda (Order #{orderNumber}) akan diverifikasi secara otomatis.
+          )}
+
+          {step === 6 && orderNumber && (
+            <div className="card anim text-center py-6 px-5 mt-4">
+              <h2 className="mb-2 text-[18px] font-extrabold font-heading text-[var(--brand)]">Menunggu Verifikasi!</h2>
+              <p className="mb-5 text-[14px] leading-relaxed text-[var(--text-3)]">
+                Silakan selesaikan pembayaran sesuai instruksi di atas.
               </p>
               <a
                 href={`/checkout/success?orderNumber=${orderNumber}`}
-                className="btn btn-primary btn-lg"
+                className="btn btn-primary btn-lg btn-full"
               >
                 Cek Status Pembayaran <svg className="ml-2" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
               </a>
             </div>
-          ) : null}
+          )}
         </div>
 
         <aside className="h-fit lg:sticky lg:top-[80px]">
