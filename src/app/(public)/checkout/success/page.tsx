@@ -58,6 +58,11 @@ export default async function CheckoutSuccessPage({
               Unggah Ulang Bukti
             </Link>
           )}
+          {(order.status === "pending" || order.status === "awaiting_payment") && (
+            <Link href={`/checkout?courseId=${order.courseId}`} className="btn btn-ghost btn-lg">
+              Ubah Metode Pembayaran
+            </Link>
+          )}
         </div>
       </div>
     </main>

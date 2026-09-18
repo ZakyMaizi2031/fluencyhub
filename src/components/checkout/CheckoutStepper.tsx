@@ -479,13 +479,13 @@ export function CheckoutStepper({
 
               <button type="button" className="btn btn-primary btn-full btn-lg" disabled={busy} onClick={pay}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                <span className="ml-2">{busy ? "Memproses..." : "Cek Status Pembayaran"}</span>
+                <span className="ml-2">{busy ? "Memproses..." : "Bayar Sekarang"}</span>
               </button>
               <p className="mt-2.5 text-center text-[11px] text-[var(--text-4)]">Diproses oleh Midtrans & Xendit. SSL terenkripsi.</p>
             </div>
           )}
 
-          {step === 6 && !orderNumber && (
+          {step === 6 && (vaNumber || qrImage || qrString) ? (
             <VAInstructions
               vaNumber={vaNumber}
               qrImage={qrImage}
@@ -496,9 +496,7 @@ export function CheckoutStepper({
               logoUrl={method?.logoUrl}
               title={qrImage || qrString ? "Scan QRIS" : "Transfer / payment code"}
             />
-          )}
-
-          {step === 6 && orderNumber ? (
+          ) : step === 6 && orderNumber ? (
             <div className="card anim text-center py-10 px-5">
               <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full border border-[var(--yellow-border)] bg-[var(--yellow-bg)] text-[var(--accent)]">
                 <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
