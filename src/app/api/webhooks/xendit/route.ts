@@ -22,12 +22,18 @@ function isPaid(body: Record<string, unknown>): boolean {
   const status = String(body.status ?? (body.data as { status?: string } | undefined)?.status ?? "")
     .toUpperCase();
   const event = String(body.event ?? "").toUpperCase();
+  
+  // Check for Fixed Virtual Account Paid webhook payload
+  // FVA Paid webhooks don't have "status" or "event" fields, but they have payment_id and callback_virtual_account_id
+  const isFvaPaid = Boolean(body.payment_id && body.callback_virtual_account_id);
+
   return (
     status === "PAID" ||
     status === "SUCCEEDED" ||
     status === "COMPLETED" ||
     event.includes("PAID") ||
-    event.includes("SUCCEEDED")
+    event.includes("SUCCEEDED") ||
+    isFvaPaid
   );
 }
 

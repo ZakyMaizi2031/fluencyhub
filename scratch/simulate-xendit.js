@@ -6,7 +6,7 @@ const auth = "Basic " + Buffer.from(XENDIT_API_KEY + ":").toString("base64");
 const req = https.request(
   {
     hostname: "api.xendit.co",
-    path: `/callback_virtual_accounts/77ffa763-e9df-47f1-84d0-937d0a5c94e8`,
+    path: `/callback_virtual_accounts/4ae4db52-9f97-492e-b4e9-55e05388ddc5`,
     method: "GET",
     headers: {
       Authorization: auth,
