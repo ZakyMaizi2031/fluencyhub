@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { countLessonsForCourse, listPublicCurriculum } from "@/lib/db/curriculum.queries";
 import { getCourseBySlug } from "@/lib/db/courses.queries";
 import { getInstructorPublic } from "@/lib/db/users.queries";
+import { checkEnrollment } from "@/lib/db/enrollments.queries";
 import { auth } from "@/lib/session";
 import { formatIdr } from "@/lib/utils/cn";
 
@@ -22,11 +23,14 @@ export default async function PublicCoursePage({
     auth(),
   ]);
 
+  const isEnrolled = session?.user?.id ? await checkEnrollment(Number(session.user.id), course.id) : false;
+
   const preview = curriculum.flatMap((s) => s.lessons).find((l) => l.previewVideoId);
   const checkoutPath = `/checkout?courseId=${course.id}`;
-  const buyHref = session?.user
-    ? checkoutPath
-    : `/auth/signin?callbackUrl=${encodeURIComponent(checkoutPath)}`;
+  let buyHref = `/auth/signin?callbackUrl=${encodeURIComponent(checkoutPath)}`;
+  if (session?.user) {
+    buyHref = isEnrolled ? `/dashboard/courses/${course.id}` : checkoutPath;
+  }
 
   return (
     <main>
@@ -136,7 +140,11 @@ export default async function PublicCoursePage({
             <p className="mt-1 text-sm text-[var(--text-3)]">Lifetime access after payment is confirmed</p>
           </div>
           <Link href={buyHref} className="btn btn-primary btn-lg">
-            {session?.user ? "Beli sekarang" : "Daftar / Beli dengan Google"}
+            {!session?.user 
+              ? "Daftar / Beli dengan Google" 
+              : isEnrolled 
+                ? "Lanjut Belajar" 
+                : "Beli sekarang"}
           </Link>
         </div>
       </section>
