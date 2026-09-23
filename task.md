@@ -1,0 +1,7 @@
+- `[/]` Create `src/lib/notifications.ts`
+  - `[ ]` Implement `sendFonnteWhatsApp` using fetch
+  - `[ ]` Implement `sendResendEmail` using fetch
+  - `[ ]` Implement `notifyPaymentSuccess` to assemble data and send
+- `[ ]` Hook into `src/lib/orders.ts`
+  - `[ ]` Call `notifyPaymentSuccess` in `markOrderPaid`
+- `[ ]` Create `walkthrough.md`

@@ -6,7 +6,7 @@ const amount = args[1] || 1799000;
 
 if (!externalId) {
   console.log("❌ ERROR: Masukkan External ID (nomor order)!");
-  console.log("👉 Cara pakenya: node scratch/simulate-xendit.js FH-20260921-123456 1799000");
+  console.log("👉 Cara pakenya: node scratch/simulate-qris.js FH-20260921-123456 1799000");
   process.exit(1);
 }
 
@@ -14,15 +14,15 @@ if (!externalId) {
 const XENDIT_API_KEY = "xnd_development_i3u75eNlmUSCJxzeVVD2l1z9qApnzyP5yVOOW3FpaxDSr0VJXJRk7YCHfErjtONC";
 const auth = "Basic " + Buffer.from(XENDIT_API_KEY + ":").toString("base64");
 
-// Payload jumlah pembayaran (sesuai dokumentasi nomor 4 & 5)
+// Payload jumlah pembayaran QRIS
 const data = JSON.stringify({ amount: Number(amount) });
 
-console.log("🔄 Mensimulasikan pembayaran Virtual Account...");
+console.log("🔄 Mensimulasikan pembayaran QRIS...");
 
 const req = https.request(
   {
     hostname: "api.xendit.co",
-    path: `/callback_virtual_accounts/external_id=${externalId}/simulate_payment`,
+    path: `/qr_codes/${externalId}/payments/simulate`,
     method: "POST",
     headers: {
       Authorization: auth,

@@ -3,6 +3,7 @@ import { getCourseById } from "@/lib/db/courses.queries";
 import { createEnrollment } from "@/lib/db/enrollments.queries";
 import { getOrderById, updateOrderStatus } from "@/lib/db/orders.queries";
 import { approveProofsForOrder } from "@/lib/db/payment-proofs.queries";
+import { notifyPaymentSuccess } from "@/lib/notifications";
 
 export function generateOrderNumber() {
   const d = new Date();
@@ -30,6 +31,10 @@ export async function markOrderPaid(order: Order, course: Course): Promise<Order
     courseId: order.courseId,
     orderId: order.id,
   });
+
+  // Tembak notifikasi secara paralel (berjalan di background)
+  notifyPaymentSuccess(order.id).catch(e => console.error("Gagal mengirim notifikasi:", e));
+
   return updated;
 }
 

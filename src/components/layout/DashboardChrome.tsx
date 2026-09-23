@@ -21,7 +21,6 @@ export function DashboardChrome({
     { id: "dashboard", icon: "LayoutDashboard", label: "Dashboard", href: "/dashboard" },
     { id: "videos", icon: "Play", label: "Videos", href: "/dashboard/videos" },
     { id: "live", icon: "Video", label: "Live", href: "/dashboard/live" },
-    { id: "studio", icon: "Building2", label: "Studio", href: "/dashboard/studio" },
     { id: "resources", icon: "BookOpen", label: "Resources", href: "/dashboard/resources" },
     { id: "home", icon: "Home", label: "Halaman Utama", href: "/" },
   ];

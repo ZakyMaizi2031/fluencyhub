@@ -7,9 +7,9 @@ export default async function AdminPaymentsPage() {
     <div>
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-2xl font-extrabold">Transaksi</h1>
-        <button type="button" className="btn btn-secondary btn-sm" disabled>
-          Export XLSX
-        </button>
+        <a href="/api/admin/export-orders" className="btn btn-secondary btn-sm">
+          Export CSV
+        </a>
       </div>
       <p className="mb-4 text-sm text-[var(--text-3)]">
         Approve a manual transfer to mark it paid and enroll the buyer in the course.

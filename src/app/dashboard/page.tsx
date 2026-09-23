@@ -27,7 +27,6 @@ export default async function DashboardHomePage() {
   const stats = [
     { icon: "CheckCircle", bg: "bg-green-50", c: "#16a34a", lbl: "Lesson Selesai", val: `${statsData.totalCompletedLessons}/${statsData.totalLessons}` },
     { icon: "Video", bg: "bg-blue-50", c: "#2563eb", lbl: "Sesi Live", val: `${statsData.totalLiveClasses}` },
-    { icon: "Building2", bg: "bg-yellow-50", c: "#d97706", lbl: "Studio Booking", val: "0/1" },
     { icon: "FileText", bg: "bg-purple-50", c: "#7c3aed", lbl: "Resources", val: `${statsData.totalResources}` },
   ];
 
