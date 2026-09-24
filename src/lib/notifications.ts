@@ -1,6 +1,7 @@
 import { getOrderById } from "./db/orders.queries";
 import { getUserById } from "./db/users.queries";
 import { getCourseById } from "./db/courses.queries";
+import { getPaymentMethodById } from "./db/payment-methods.queries";
 
 const FONNTE_API_URL = "https://api.fonnte.com/send";
 const RESEND_API_URL = "https://api.resend.com/emails";
@@ -98,24 +99,41 @@ export async function notifyPaymentSuccess(orderId: number) {
     ]);
 
     if (!user || !course) return;
+    
+    // Ambil nama metode pembayaran jika ada
+    let methodName = "Transfer";
+    if (order.paymentMethodId) {
+      const pm = await getPaymentMethodById(order.paymentMethodId);
+      if (pm) methodName = pm.name;
+    }
 
     // 1. Siapkan Pesan WhatsApp
     const formatter = new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR" });
     const formattedTotal = formatter.format(Number(order.totalAmount));
 
-    const waMessage = `*FluencyHub - Pembayaran Berhasil!* 🎉\n\nHalo *${user.name}*, pembayaran kamu untuk kelas *${course.title}* sebesar ${formattedTotal} telah berhasil diverifikasi.\n\nSilakan login ke *Dashboard* kamu dan mulai belajar sekarang:\n👉 https://fluencyhub.id/dashboard\n\nSemoga lancar belajarnya brok! 🔥`;
+    const waMessage = `Hi ${user.name}! Access to ${course.title} is now active. Click: https://fluencyhub.id/dashboard`;
 
     // 2. Siapkan Pesan Email (HTML)
-    const emailSubject = `Pembayaran Berhasil: ${course.title} 🚀`;
+    const emailSubject = `✅ Payment Confirmed — Access to ${course.title} is Now Active!`;
+    const formattedDate = (order.paidAt ?? new Date()).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' }) + " WIB";
+    
     const emailHtml = `
       <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
-        <h2 style="color: #4F46E5;">Pembayaran Berhasil! 🎉</h2>
-        <p>Halo <strong>${user.name}</strong>,</p>
-        <p>Terima kasih! Pembayaran kamu untuk kelas <strong>${course.title}</strong> sebesar <strong>${formattedTotal}</strong> telah berhasil kami verifikasi.</p>
-        <p>Kelas kamu sudah aktif dan bisa langsung diakses melalui dashboard.</p>
-        <a href="https://fluencyhub.id/dashboard" style="display: inline-block; padding: 12px 24px; background-color: #4F46E5; color: white; text-decoration: none; border-radius: 6px; font-weight: bold; margin-top: 10px;">Masuk ke Dashboard</a>
-        <br><br>
-        <p style="color: #666; font-size: 14px;">Salam hangat,<br>Tim FluencyHub</p>
+        <p>Hi ${user.name},</p>
+        <p>Great news! Your payment for the following course has been confirmed:</p>
+        
+        <table style="margin-bottom: 20px;">
+          <tr><td style="padding-right: 10px;">📚 <strong>Course</strong></td><td>: ${course.title}</td></tr>
+          <tr><td style="padding-right: 10px;">💰 <strong>Amount Paid</strong></td><td>: ${formattedTotal}</td></tr>
+          <tr><td style="padding-right: 10px;">💳 <strong>Method</strong></td><td>: ${methodName}</td></tr>
+          <tr><td style="padding-right: 10px;">📅 <strong>Date</strong></td><td>: ${formattedDate}</td></tr>
+          <tr><td style="padding-right: 10px;">🔖 <strong>Order ID</strong></td><td>: ${order.orderNumber}</td></tr>
+        </table>
+        
+        <p>Access your course now:<br>
+        👉 <a href="https://fluencyhub.id/dashboard" style="color: #4F46E5; text-decoration: none; font-weight: bold;">https://fluencyhub.id/dashboard</a></p>
+        
+        <p style="margin-top: 30px;">Happy learning!<br>The FluencyHub Team</p>
       </div>
     `;
 
@@ -123,9 +141,10 @@ export async function notifyPaymentSuccess(orderId: number) {
     const promises = [];
     
     if (user.whatsappNumber) {
-      // Pastikan awalan 0 diganti jadi 62
+      // Pastikan awalan 0 diganti jadi 62, dan kalau awalnya 8 langsung ditambah 62
       let targetPhone = user.whatsappNumber.replace(/[^0-9]/g, "");
       if (targetPhone.startsWith("0")) targetPhone = "62" + targetPhone.slice(1);
+      else if (targetPhone.startsWith("8")) targetPhone = "62" + targetPhone;
       
       promises.push(sendFonnteWhatsApp(targetPhone, waMessage));
     }
