@@ -32,8 +32,8 @@ export async function markOrderPaid(order: Order, course: Course): Promise<Order
     orderId: order.id,
   });
 
-  // Tembak notifikasi secara paralel (berjalan di background)
-  notifyPaymentSuccess(order.id).catch(e => console.error("Gagal mengirim notifikasi:", e));
+  // Tunggu notifikasi selesai supaya Vercel Serverless tidak membunuh prosesnya di tengah jalan
+  await notifyPaymentSuccess(order.id).catch(e => console.error("Gagal mengirim notifikasi:", e));
 
   return updated;
 }
